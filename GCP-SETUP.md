@@ -124,9 +124,7 @@ Go to **APIs & Services > Library** and enable:
 1. Go to **IAM & Admin > IAM**
 2. At the top of the member list, tick **"Include Google-provided role grants"** — this reveals system-managed accounts that are hidden by default
 3. In the filter/search box, paste the Cloud Build service account email:
-   ```
-   882266340372@cloudbuild.gserviceaccount.com
-   ```
+   {project-id}@cloudbuild.gserviceaccount.com
 4. Click the **pencil (Edit principals)** icon on the right of that row
 5. Click **+ Add Another Role** and add each of the following:
    - `Cloud Run Admin`
@@ -137,7 +135,6 @@ Go to **APIs & Services > Library** and enable:
 
 > **Tip:** If the account still does not appear, go to **Cloud Build > Settings** — this page lists all roles and lets you enable them with a single toggle, which is often easier than the IAM page.
 
----
 
 ## Step 7 — Create Cloud Build Trigger
 
