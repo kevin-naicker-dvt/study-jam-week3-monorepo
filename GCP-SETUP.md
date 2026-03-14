@@ -103,38 +103,54 @@ Go to **APIs & Services > Library** and enable:
 
 ---
 
-## Step 5 — Create Service Account for Cloud Run
+## Step 5 — Create Service Accounts
+
+This project uses **two dedicated service accounts** — one for the build pipeline, one for the running app. Using dedicated accounts follows least-privilege best practices.
+
+### 5a — Cloud Build Service Account (runs the CI/CD pipeline)
 
 1. Go to **IAM & Admin > Service Accounts**
 2. Click **+ Create Service Account**
 3. Fill in:
-   - **Name:** `studyjam-cloudrun-sa`
-   - **Description:** Service account for Cloud Run services
+   - **Name:** `studyjam-build-sa`
+   - **Description:** Cloud Build pipeline service account
 4. Click **Create and Continue**
 5. Grant these roles:
-   - `Cloud SQL Client`
-   - `Secret Manager Secret Accessor`
-6. Click **Done**
-
----
-
-## Step 6 — Grant Cloud Build Permissions
-
-> **Note:** The Cloud Build service account is created automatically by GCP when the Cloud Build API is enabled. You do **not** need to create it manually. If you cannot see it, make sure the Cloud Build API is enabled (Step 1) and then wait ~30 seconds before refreshing.
-
-1. Go to **IAM & Admin > IAM**
-2. At the top of the member list, tick **"Include Google-provided role grants"** — this reveals system-managed accounts that are hidden by default
-3. In the filter/search box, paste the Cloud Build service account email:
-   {project-id}@cloudbuild.gserviceaccount.com
-4. Click the **pencil (Edit principals)** icon on the right of that row
-5. Click **+ Add Another Role** and add each of the following:
    - `Cloud Run Admin`
    - `Artifact Registry Writer`
    - `Service Account User`
    - `Secret Manager Secret Accessor`
-6. Click **Save**
+   - `Logs Writer`
+   - `Storage Object Viewer`
+6. Click **Done**
 
-> **Tip:** If the account still does not appear, go to **Cloud Build > Settings** — this page lists all roles and lets you enable them with a single toggle, which is often easier than the IAM page.
+### 5b — Cloud Run Service Account (runs the deployed app)
+
+1. Click **+ Create Service Account** again
+2. Fill in:
+   - **Name:** `studyjam-cloudrun-sa`
+   - **Description:** Cloud Run runtime service account
+3. Click **Create and Continue**
+4. Grant these roles:
+   - `Cloud SQL Client`
+   - `Secret Manager Secret Accessor`
+5. Click **Done**
+
+---
+
+## Step 6 — Verify Service Account Roles in IAM
+
+Confirm both service accounts created in Step 5 appear in IAM with the correct roles.
+
+1. Go to **IAM & Admin > IAM**
+2. Filter by `studyjam` — you should see both accounts:
+
+   | Service Account | Roles |
+   |----------------|-------|
+   | `studyjam-build-sa@dvt-lab-devfest-2025.iam.gserviceaccount.com` | Cloud Run Admin, Artifact Registry Writer, Service Account User, Secret Manager Secret Accessor, Logs Writer, Storage Object Viewer |
+   | `studyjam-cloudrun-sa@dvt-lab-devfest-2025.iam.gserviceaccount.com` | Cloud SQL Client, Secret Manager Secret Accessor |
+
+If any roles are missing, click the pencil icon on the row and add them.
 
 
 ## Step 7 — Create Cloud Build Trigger
@@ -145,15 +161,20 @@ Go to **APIs & Services > Library** and enable:
    - **Name:** `studyjam-deploy`
    - **Event:** Push to a branch
    - **Repository:** `kevin-naicker-dvt/study-jam-week3-monorepo` (if not listed, click "Connect new repository" and authenticate with GitHub)
-   - **Branch:** `^gcp/dev$` -- this is our GCP build branch, do not use MAIN
+   - **Branch:** `^gcp/dev$` — this is our GCP build branch, do not use main
    - **Configuration:** Cloud Build configuration file (YAML)
    - **File location:** `cloudbuild.yaml`
+   - **Service account:** Select `studyjam-build-sa@dvt-lab-devfest-2025.iam.gserviceaccount.com` (the dedicated build SA created in Step 5a)
+
+   > **Note:** There are two service accounts in this project — do not confuse them:
+   > - `studyjam-build-sa` → selected here, **runs the CI/CD build pipeline**
+   > - `studyjam-cloudrun-sa` → **runs the deployed app** on Cloud Run (already set in `cloudbuild.yaml`, no action needed here)
 4. Under **Substitution variables**, add:
 
    | Variable | Value |
    |----------|-------|
    | `_REGION` | `africa-south1` |
-   | `_REPO_NAME` | `studyjam-repo` |
+   | `_REPO_NAME` | `study-jam-week3-monorepo` |
    | `_BACKEND_SERVICE` | `studyjam-backend` |
    | `_FRONTEND_SERVICE` | `studyjam-frontend` |
    | `_DB_HOST` | *(Cloud SQL private IP — see SQL instance page)* |

@@ -24,7 +24,8 @@ DB_NAME="studyjam"
 DB_USER="studyjam_user"
 SA_NAME="studyjam-cloudrun-sa"
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
-CLOUD_BUILD_SA="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
+BUILD_SA_NAME="studyjam-build-sa"
+BUILD_SA_EMAIL="${BUILD_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
@@ -165,20 +166,32 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --role="roles/secretmanager.secretAccessor" --quiet
 success "IAM roles granted to service account"
 
-# ── Step 6: Grant Cloud Build permissions ─────────────────────────────────────
-info "Granting permissions to Cloud Build service account..."
-CLOUD_BUILD_ROLES=(
+# ── Step 6: Create dedicated Cloud Build service account ─────────────────────
+info "Creating dedicated Cloud Build service account: ${BUILD_SA_NAME}..."
+if gcloud iam service-accounts describe "${BUILD_SA_EMAIL}" --project="${PROJECT_ID}" &>/dev/null; then
+  warn "Service account '${BUILD_SA_NAME}' already exists — skipping"
+else
+  gcloud iam service-accounts create "${BUILD_SA_NAME}" \
+    --display-name="Study Jam Cloud Build Service Account" \
+    --project="${PROJECT_ID}"
+  success "Service account created: ${BUILD_SA_EMAIL}"
+fi
+
+info "Granting roles to Cloud Build service account..."
+BUILD_SA_ROLES=(
   "roles/run.admin"
   "roles/artifactregistry.writer"
   "roles/iam.serviceAccountUser"
   "roles/secretmanager.secretAccessor"
+  "roles/logging.logWriter"
+  "roles/storage.objectViewer"
 )
-for ROLE in "${CLOUD_BUILD_ROLES[@]}"; do
+for ROLE in "${BUILD_SA_ROLES[@]}"; do
   gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-    --member="serviceAccount:${CLOUD_BUILD_SA}" \
+    --member="serviceAccount:${BUILD_SA_EMAIL}" \
     --role="${ROLE}" --quiet
 done
-success "Cloud Build permissions granted"
+success "Cloud Build service account roles granted"
 
 # ── Step 7: Create Cloud Build Trigger ────────────────────────────────────────
 info "Creating Cloud Build trigger..."
@@ -193,6 +206,7 @@ else
     --repo-owner="kevin-naicker-dvt" \
     --branch-pattern="^gcp/dev$" \
     --build-config="cloudbuild.yaml" \
+    --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA_EMAIL}" \
     --substitutions="_REGION=${REGION},_REPO_NAME=${REPO_NAME},_BACKEND_SERVICE=studyjam-backend,_FRONTEND_SERVICE=studyjam-frontend,_DB_HOST=${DB_HOST},_DB_NAME=${DB_NAME},_DB_USER=${DB_USER},_DB_PASSWORD_NAME=studyjam-db-password,_JWT_SECRET_NAME=studyjam-jwt-secret" \
     --project="${PROJECT_ID}"
   success "Cloud Build trigger created: ${TRIGGER_NAME}"
@@ -208,7 +222,8 @@ echo "Project ID:        ${PROJECT_ID}"
 echo "Region:            ${REGION}"
 echo "Artifact Registry: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}"
 echo "Cloud SQL:         ${DB_INSTANCE} (IP: ${DB_HOST})"
-echo "Service Account:   ${SA_EMAIL}"
+echo "Build SA:          ${BUILD_SA_EMAIL}"
+echo "Runtime SA:        ${SA_EMAIL}"
 echo "Build Trigger:     ${TRIGGER_NAME}"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
