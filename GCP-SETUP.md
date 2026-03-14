@@ -1,5 +1,6 @@
 # GCP Resource Setup Guide — Option 1 (Manual via Console)
 
+> **Github Repo:** `https://github.com/kevin-naicker-dvt/study-jam-week3-monorepo`  
 > **Project:** `dvt-lab-devfest-2025`  
 > **Project Number:** `882266340372`  
 > **Region:** `africa-south1`  
@@ -143,8 +144,8 @@ Go to **APIs & Services > Library** and enable:
 3. Fill in:
    - **Name:** `studyjam-deploy`
    - **Event:** Push to a branch
-   - **Source:** Select your connected GitHub repository
-   - **Branch:** `^main$`
+   - **Repository:** `kevin-naicker-dvt/study-jam-week3-monorepo` (if not listed, click "Connect new repository" and authenticate with GitHub)
+   - **Branch:** `^gcp/dev$` -- this is our GCP build branch, do not use MAIN
    - **Configuration:** Cloud Build configuration file (YAML)
    - **File location:** `cloudbuild.yaml`
 4. Under **Substitution variables**, add:

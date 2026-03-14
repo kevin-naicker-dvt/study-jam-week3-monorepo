@@ -190,8 +190,8 @@ else
   gcloud builds triggers create github \
     --name="${TRIGGER_NAME}" \
     --repo-name="study-jam-week3-monorepo" \
-    --repo-owner="$(gcloud config get-value account | cut -d@ -f1)" \
-    --branch-pattern="^main$" \
+    --repo-owner="kevin-naicker-dvt" \
+    --branch-pattern="^gcp/dev$" \
     --build-config="cloudbuild.yaml" \
     --substitutions="_REGION=${REGION},_REPO_NAME=${REPO_NAME},_BACKEND_SERVICE=studyjam-backend,_FRONTEND_SERVICE=studyjam-frontend,_DB_HOST=${DB_HOST},_DB_NAME=${DB_NAME},_DB_USER=${DB_USER},_DB_PASSWORD_NAME=studyjam-db-password,_JWT_SECRET_NAME=studyjam-jwt-secret" \
     --project="${PROJECT_ID}"

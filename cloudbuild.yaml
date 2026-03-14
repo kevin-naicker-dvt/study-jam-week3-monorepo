@@ -1,6 +1,8 @@
 # GCP Cloud Build CI/CD Pipeline
-# Project: dvt-lab-devfest-2025
-# Region:  africa-south1
+# Project:    dvt-lab-devfest-2025
+# Region:     africa-south1
+# GitHub:     https://github.com/kevin-naicker-dvt/study-jam-week3-monorepo
+# Trigger on: gcp/dev branch
 #
 # Substitution variables (set in Cloud Build trigger):
 #   _REGION            = africa-south1
