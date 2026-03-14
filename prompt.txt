@@ -18,6 +18,8 @@
     2.4. Service 1 = Backend API, deployed independently of UX, and must pass health check
     2.5. Service 2 = UX, deploy once API health check passes
     2.6. Deployment path will be Github > Cloud Build > Artifact Registry > Cloud Run > Deploy > Test
+    2.7. For new clud environments, ensure there are no existing build triger, or artifact registries, or cloud run services
+    2.8. User to setup Github repo within GCP Repositories
 
 3. App Use Cases
     3.1. Register New User (Name, Surname, Email, Password)
@@ -47,3 +49,8 @@
 9. CICD parameters & Security ***
 
     9.1. DB password = store as GCP secret
+
+
+10. Create all code using machine learning in Cursor
+11. Create an .md file for manual resource creation on GCP - Option 1 (Basic users, to learn)
+11. Create a set of gcloud scripts to create resources programatically - Option 2 (Advanced users for full auomation)
