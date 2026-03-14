@@ -119,17 +119,22 @@ Go to **APIs & Services > Library** and enable:
 
 ## Step 6 — Grant Cloud Build Permissions
 
+> **Note:** The Cloud Build service account is created automatically by GCP when the Cloud Build API is enabled. You do **not** need to create it manually. If you cannot see it, make sure the Cloud Build API is enabled (Step 1) and then wait ~30 seconds before refreshing.
+
 1. Go to **IAM & Admin > IAM**
-2. Find the **Cloud Build service account** (format: `{PROJECT_NUMBER}@cloudbuild.gserviceaccount.com`)
-3. Click the pencil (Edit) icon
-4. Add these roles:
+2. At the top of the member list, tick **"Include Google-provided role grants"** — this reveals system-managed accounts that are hidden by default
+3. In the filter/search box, paste the Cloud Build service account email:
+   {project-id}@cloudbuild.gserviceaccount.com
+4. Click the **pencil (Edit principals)** icon on the right of that row
+5. Click **+ Add Another Role** and add each of the following:
    - `Cloud Run Admin`
    - `Artifact Registry Writer`
    - `Service Account User`
    - `Secret Manager Secret Accessor`
-5. Click **Save**
+6. Click **Save**
 
----
+> **Tip:** If the account still does not appear, go to **Cloud Build > Settings** — this page lists all roles and lets you enable them with a single toggle, which is often easier than the IAM page.
+
 
 ## Step 7 — Create Cloud Build Trigger
 

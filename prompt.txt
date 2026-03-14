@@ -18,7 +18,7 @@
     2.4. Service 1 = Backend API, deployed independently of UX, and must pass health check
     2.5. Service 2 = UX, deploy once API health check passes
     2.6. Deployment path will be Github > Cloud Build > Artifact Registry > Cloud Run > Deploy > Test
-    2.7. For new clud environments, ensure there are no existing build triger, or artifact registries, or cloud run services
+    2.7. For new clud environments, ensure there are no existing build triger, secrets, or artifact registries, or cloud run services
     2.8. User to setup Github repo within GCP Repositories
 
 3. App Use Cases
