@@ -137,3 +137,16 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# ReactJS
+build/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# NestJS
+dist/
+.env.development
+.env.production
+.env.test

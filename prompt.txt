@@ -1,0 +1,48 @@
+0. Repo Setup
+    0.0 Repo study-jam-week3-monorepo
+    0.1 Monorepo
+    0.2 Add gitignore for ReactjJS and NestJS
+
+1. Create a 3 tier app framework
+    1.1 UX - ReactJS
+    2.2 Backend - NestJS
+    2.3 ORM - Drizzle
+    2.4 Database - PostgreSQL (via GCP CloudSQL) ***
+
+2. Containerization and Deployment 
+    2.0. Use Docker, Deployed to Google Cloud Platform
+    2.1. CI (Build)- via GCP Cloud Build (Docker using cloudbuild.yaml and docker-compose.yml) ***
+    2.2. CD (Deploy) - via GCP Cloud Run (One service for backend, one service for UX)
+    2.3. Container Registry - via GCP Artifact Registry ***
+    2.4. Service 1 = Backend API, deployed independently of UX, and must pass health check
+    2.5. Service 2 = UX, deploy once API health check passes
+    2.6. Deployment path will be Github > Cloud Build > Artifact Registry > Cloud Run > Deploy > Test
+
+3. App Use Cases
+    3.1. Register New User (Name, Surname, Email, Password)
+    3.2. Login User (Access Granted, Access Denied)
+
+4. Testing
+    4.1. Unit Testing - None for now
+    4.2. Build and Deployment Check - Yes
+
+5. Guardrails
+    5.1. Create service account for Cloud Run, and for the app to connect to the DB ***
+    5.2. Use GCP created domains for now
+
+6. MCP servers
+    6.1. None for now
+
+7. Spec Driven Development
+    7.1. None for Now
+
+8. GCP Cloud Account Details ***
+
+    8.1 URL: https://console.cloud.google.com/welcome?project=dvt-lab-devfest-2025
+    8.2 Project ID = dvt-lab-devfest-2025
+    8.3 Project Number = 882266340372
+    8.3 Region = South Africa (africa-south1)
+
+9. CICD parameters & Security ***
+
+    9.1. DB password = store as GCP secret
