@@ -2,6 +2,7 @@
     0.0 Repo study-jam-week3-monorepo
     0.1 Monorepo
     0.2 Add gitignore for ReactjJS and NestJS
+    0.3 Cursor ML setting (Claude Sonnet 4.6 Max Mode)
 
 1. Create a 3 tier app framework
     1.1 UX - ReactJS
