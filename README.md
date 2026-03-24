@@ -51,7 +51,8 @@ study-jam-week3-monorepo/
 ├── docker-compose.yml      # Local development
 ├── cloudbuild.yaml         # GCP CI/CD pipeline
 ├── GCP-SETUP.md            # Manual GCP setup (Cloud Run)
-└── GKE-SETUP.md            # GKE lab (Kubernetes on same GCP project)
+├── GKE-SETUP.md            # GKE lab (Kubernetes on same GCP project)
+└── GKE-SETUP.html          # Same GKE lab, styled HTML manual (open in browser)
 ```
 
 ---
@@ -106,7 +107,7 @@ npm run dev
 Follow the step-by-step guide: **[GCP-SETUP.md](./GCP-SETUP.md)**
 
 ### Option 1b — GKE Lab (Kubernetes)
-Deploy the same app to **GKE** using existing Cloud SQL, Artifact Registry, and secrets: **[GKE-SETUP.md](./GKE-SETUP.md)**
+Deploy the same app to **GKE** using existing Cloud SQL, Artifact Registry, and secrets: **[GKE-SETUP.md](./GKE-SETUP.md)** (or the **[HTML manual](./GKE-SETUP.html)** for presenting / reading in the browser)
 
 ### Option 2 — Automated Setup (Advanced)
 ```bash

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: studyjam-frontend
+  namespace: studyjam
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: studyjam-frontend
+  template:
+    metadata:
+      labels:
+        app: studyjam-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-frontend:gke-latest
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: studyjam-frontend
+  namespace: studyjam
+spec:
+  type: ClusterIP
+  selector:
+    app: studyjam-frontend
+  ports:
+    - port: 8080
+      targetPort: 8080

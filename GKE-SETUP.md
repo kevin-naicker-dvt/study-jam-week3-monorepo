@@ -1,5 +1,7 @@
 # GKE Lab Setup — Study Jam Week 3 on Google Kubernetes Engine
 
+**Styled HTML (sidebar, tables, hero):** [GKE-SETUP.html](./GKE-SETUP.html)
+
 > **Purpose:** Deploy the same **React + NestJS + PostgreSQL** stack to **GKE** in your **existing** GCP project, reusing **Cloud SQL**, **Artifact Registry**, and **Secret Manager** from [GCP-SETUP.md](./GCP-SETUP.md) where possible.  
 > **GitHub Repo:** `https://github.com/kevin-naicker-dvt/study-jam-week3-monorepo`  
 > **Project:** `dvt-lab-devfest-2025`  
