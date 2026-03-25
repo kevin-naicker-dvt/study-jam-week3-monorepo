@@ -1,21 +1,24 @@
-# Requires Secret studyjam-runtime in namespace studyjam with keys DB_PASSWORD and JWT_SECRET
-# (exact names; empty values will still crash the app). Example:
-#   kubectl create secret generic studyjam-runtime -n studyjam \
-#     --from-literal=DB_PASSWORD='...' --from-literal=JWT_SECRET='...'
+# Backend API (NestJS). Requires Secret studyjam-k8s-runtime: DB_PASSWORD, JWT_SECRET.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: studyjam-backend
-  namespace: studyjam
+  name: studyjam-k8s-be
+  labels:
+    app.kubernetes.io/name: studyjam-backend
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: studyjam-week3
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: studyjam-backend
+      app: studyjam-k8s-be
   template:
     metadata:
       labels:
-        app: studyjam-backend
+        app: studyjam-k8s-be
+        app.kubernetes.io/name: studyjam-backend
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: studyjam-week3
     spec:
       containers:
         - name: backend
@@ -24,17 +27,17 @@ spec:
             - containerPort: 3000
           envFrom:
             - configMapRef:
-                name: studyjam-backend-config
+                name: studyjam-k8s-backend-config
           env:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: studyjam-runtime
+                  name: studyjam-k8s-runtime
                   key: DB_PASSWORD
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: studyjam-runtime
+                  name: studyjam-k8s-runtime
                   key: JWT_SECRET
           readinessProbe:
             httpGet:
@@ -48,16 +51,3 @@ spec:
               port: 3000
             initialDelaySeconds: 30
             periodSeconds: 15
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: studyjam-backend
-  namespace: studyjam
-spec:
-  type: ClusterIP
-  selector:
-    app: studyjam-backend
-  ports:
-    - port: 3000
-      targetPort: 3000

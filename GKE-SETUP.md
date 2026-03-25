@@ -2,7 +2,7 @@
 
 **Styled HTML (sidebar, tables, hero):** [GKE-SETUP.html](./GKE-SETUP.html)
 
-> **Purpose:** Deploy the same **React + NestJS + PostgreSQL** stack to **GKE** in your **existing** GCP project, reusing **Cloud SQL**, **Artifact Registry**, and **Secret Manager** from [GCP-SETUP.md](./GCP-SETUP.md) where possible.  
+> **Purpose:** Deploy the same **React + NestJS + PostgreSQL** stack to **GKE** in your **existing** GCP project, reusing **Cloud SQL**, **Artifact Registry**, and **Secret Manager** from [GCP-SETUP.md](./GCP-SETUP.md) where possible. Kubernetes manifests live under **[`backend/kubernetes/`](./backend/kubernetes/)** (Kustomize: **`kubectl apply -k backend/kubernetes`**).  
 > **GitHub Repo:** `https://github.com/kevin-naicker-dvt/study-jam-week3-monorepo`  
 > **Project:** `dvt-lab-devfest-2025`  
 > **Region:** `africa-south1`  
@@ -19,7 +19,7 @@
 | Public HTTP | Cloud Run URLs | **Ingress** (or `LoadBalancer` services) |
 | Frontend `VITE_API_URL` | Injected in Cloud Build from Run URL | You choose a **stable URL** (Ingress hostname) **before** building the frontend image |
 | Scaling | Automatic | HPA / cluster autoscaler (configurable) |
-| **`DB_PASSWORD` / `JWT_SECRET`** | Cloud Run **`--set-secrets`** maps [Secret Manager](https://console.cloud.google.com/security/secret-manager) secrets → container env vars at deploy time | You must create a **Kubernetes Secret** in the cluster (this guide uses `studyjam-runtime` with keys `DB_PASSWORD` and `JWT_SECRET`). GKE does **not** pull from Secret Manager unless you add CSI / External Secrets / sync |
+| **`DB_PASSWORD` / `JWT_SECRET`** | Cloud Run **`--set-secrets`** maps [Secret Manager](https://console.cloud.google.com/security/secret-manager) secrets → container env vars at deploy time | You must create a **Kubernetes Secret** in the cluster (this guide uses `studyjam-k8s-runtime` with keys `DB_PASSWORD` and `JWT_SECRET`). GKE does **not** pull from Secret Manager unless you add CSI / External Secrets / sync |
 
 The backend serves **`/health`** (no `/api` prefix) and **`/api/*`** for the API ([`main.ts`](backend/src/main.ts)). The production frontend listens on **8080** (nginx); the backend on **3000**.
 
@@ -93,17 +93,19 @@ Use the password from Secret Manager when prompted. Exit with `\q`. Delete succe
 
 ## Step 3 — Create a GKE cluster
 
+**Lab cluster name in this guide:** **`studyjam-k8s-v2`** (Autopilot, regional **`africa-south1`**, default VPC, same networking assumptions as below). If you created the cluster with a different name, substitute it in every `gcloud container clusters ...` command and in **Connect**.
+
 ### Create the cluster (Google Cloud Console)
 
 1. Open **Kubernetes Engine** → **Clusters** → **Create**.
 2. Choose **Autopilot** (or **Standard** if your course requires it).
-3. Set **Name** to `studyjam-gke`, **Region** to `africa-south1`.
+3. Set **Name** to `studyjam-k8s-v2`, **Region** to `africa-south1`.
 4. Keep the **default VPC** so nodes can reach Cloud SQL **private IP** (same assumption as [GCP-SETUP.md](./GCP-SETUP.md)).
 5. Click **Create** and wait until the cluster is **Running**.
 
 ### Connect Cloud Shell to the cluster (minimal CLI)
 
-1. On the **Clusters** list, click **Connect** on `studyjam-gke`.
+1. On the **Clusters** list, click **Connect** on `studyjam-k8s-v2`.
 2. Choose **Run in Cloud Shell** (or copy the `gcloud container clusters get-credentials ...` command into Cloud Shell).
 3. When the prompt is ready, `kubectl get nodes` should list your nodes.
 
@@ -114,7 +116,7 @@ Use the password from Secret Manager when prompted. Exit with `\q`. Delete succe
 **Autopilot** (recommended for labs: less node tuning):
 
 ```bash
-gcloud container clusters create-auto studyjam-gke \
+gcloud container clusters create-auto studyjam-k8s-v2 \
   --region=africa-south1 \
   --project=dvt-lab-devfest-2025 \
   --release-channel=regular
@@ -123,7 +125,7 @@ gcloud container clusters create-auto studyjam-gke \
 **Standard** (if you need full control over node pools):
 
 ```bash
-gcloud container clusters create studyjam-gke \
+gcloud container clusters create studyjam-k8s-v2 \
   --region=africa-south1 \
   --project=dvt-lab-devfest-2025 \
   --num-nodes=2 \
@@ -135,7 +137,7 @@ gcloud container clusters create studyjam-gke \
 Fetch credentials for `kubectl` (not needed if you already used **Connect → Run in Cloud Shell**):
 
 ```bash
-gcloud container clusters get-credentials studyjam-gke \
+gcloud container clusters get-credentials studyjam-k8s-v2 \
   --region=africa-south1 \
   --project=dvt-lab-devfest-2025
 ```
@@ -194,33 +196,33 @@ docker push africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/stud
 
 The **same Docker image** reads **`DB_PASSWORD`** and **`JWT_SECRET`** from the process environment. Nothing about NestJS or the image changes between Cloud Run and GKE.
 
-| | Cloud Run ([GCP-SETUP.md](./GCP-SETUP.md), [`cloudbuild.yaml`](./cloudbuild.yaml)) | GKE (this lab, [`k8s/10-backend.yaml`](./k8s/10-backend.yaml)) |
+| | Cloud Run ([GCP-SETUP.md](./GCP-SETUP.md), [`cloudbuild.yaml`](./cloudbuild.yaml)) | GKE (this lab, [`backend/kubernetes/deployment-backend.yaml`](./backend/kubernetes/deployment-backend.yaml) via [`kubectl apply -k backend/kubernetes`](./backend/kubernetes/)) |
 |---|----------------------|-----|
 | **Where secrets live in GCP** | Secret Manager secrets `studyjam-db-password` and `studyjam-jwt-secret` (from [GCP-SETUP Step 5](./GCP-SETUP.md#step-5--store-secrets-in-secret-manager)) | Same — you still use those values |
-| **How they get into the container** | **`gcloud run deploy --set-secrets=...`** binds each GCP secret to an **environment variable name** (`DB_PASSWORD`, `JWT_SECRET`) on the Cloud Run service | Kubernetes only sees **Kubernetes `Secret` objects**. You must **`kubectl create secret …`** (or Console) in namespace **`studyjam`**, name **`studyjam-runtime`**, with keys **`DB_PASSWORD`** and **`JWT_SECRET`** — then the Deployment uses `secretKeyRef` |
+| **How they get into the container** | **`gcloud run deploy --set-secrets=...`** binds each GCP secret to an **environment variable name** (`DB_PASSWORD`, `JWT_SECRET`) on the Cloud Run service | Kubernetes only sees **Kubernetes `Secret` objects**. You must **`kubectl create secret …`** (or Console) in namespace **`studyjam-k8s`**, name **`studyjam-k8s-runtime`**, with keys **`DB_PASSWORD`** and **`JWT_SECRET`** — then the Deployment uses `secretKeyRef` |
 
 **Typical symptom if you skip the Kubernetes Secret:** backend crashes on startup with **`JwtStrategy requires a secret or key`** (or a message that **`JWT_SECRET` is missing or empty**) because the pod never received those env vars.
 
-**Fix:** complete the steps below (or pull from Secret Manager into the K8s Secret using the `gcloud secrets versions access` example). After changing the Secret, restart the Deployment: `kubectl rollout restart deployment/studyjam-backend -n studyjam`.
+**Fix:** complete the steps below (or pull from Secret Manager into the K8s Secret using the `gcloud secrets versions access` example). After changing the Secret, restart the Deployment: `kubectl rollout restart deployment/studyjam-k8s-be -n studyjam-k8s`.
 
 ---
 
 ### Google Cloud Console
 
-1. Open **Kubernetes Engine** → select cluster **`studyjam-gke`**.
+1. Open **Kubernetes Engine** → select cluster **`studyjam-k8s-v2`**.
 2. Go to **Configuration** (or **Secrets & ConfigMaps**, depending on Console version) → **Secrets** → **Create**.
-3. **Namespace:** create or choose **`studyjam`** (if the UI asks for a namespace first, create it from **Namespaces** in the same area, or use Cloud Shell once: `kubectl create namespace studyjam`).
-4. Create an **Opaque** secret named **`studyjam-runtime`** with data keys **`DB_PASSWORD`** and **`JWT_SECRET`** (values from Secret Manager or your records).
+3. **Namespace:** create or choose **`studyjam-k8s`** (if the UI asks for a namespace first, create it from **Namespaces** in the same area, or use Cloud Shell once: `kubectl create namespace studyjam-k8s`).
+4. Create an **Opaque** secret named **`studyjam-k8s-runtime`** with data keys **`DB_PASSWORD`** and **`JWT_SECRET`** (values from Secret Manager or your records).
 
 ### `kubectl` (Cloud Shell or local)
 
 Simplest path for the lab: create a namespace and a **generic** secret from literals (values from Secret Manager or your records).
 
 ```bash
-kubectl create namespace studyjam
+kubectl create namespace studyjam-k8s
 
-kubectl create secret generic studyjam-runtime \
-  --namespace=studyjam \
+kubectl create secret generic studyjam-k8s-runtime \
+  --namespace=studyjam-k8s \
   --from-literal=DB_PASSWORD='YOUR_DB_PASSWORD' \
   --from-literal=JWT_SECRET='YOUR_JWT_SECRET'
 ```
@@ -231,21 +233,66 @@ Alternatively, pull from Secret Manager (no newlines in the secret value):
 DB_PW=$(gcloud secrets versions access latest --secret=studyjam-db-password --project=dvt-lab-devfest-2025)
 JWT=$(gcloud secrets versions access latest --secret=studyjam-jwt-secret --project=dvt-lab-devfest-2025)
 
-kubectl create secret generic studyjam-runtime \
-  --namespace=studyjam \
+kubectl create secret generic studyjam-k8s-runtime \
+  --namespace=studyjam-k8s \
   --from-literal=DB_PASSWORD="$DB_PW" \
   --from-literal=JWT_SECRET="$JWT"
 ```
 
+### Runnable sync from a local env file (`.env`-style) (recommended for repeatability)
+
+The repo includes a **placeholder dotenv file** and a small **shell “job”** you can run from your machine (or Cloud Shell) so secrets are **not** pasted into YAML or a Kubernetes `Job` spec (those would store cleartext in etcd).
+
+1. Copy the example and edit real values:
+
+```bash
+cp backend/kubernetes/env/runtime-secrets.env.example backend/kubernetes/env/runtime-secrets.env
+# Edit backend/kubernetes/env/runtime-secrets.env — keys must stay DB_PASSWORD and JWT_SECRET
+```
+
+   You can use any path and name (for example **`.env.runtime-secrets`**) by passing it as the first argument to the script.
+
+2. **Option A — script** (creates namespace if needed, then applies the Secret):
+
+```bash
+./backend/kubernetes/job-apply-runtime-secret-from-env.sh
+# or: ./backend/kubernetes/job-apply-runtime-secret-from-env.sh /path/to/your.env
+```
+
+3. **Option B — Kustomize** (same Secret name; requires the file at `backend/kubernetes/env/runtime-secrets.env`):
+
+```bash
+kubectl apply -k backend/kubernetes/secret-from-env
+```
+
+The files **`backend/kubernetes/env/runtime-secrets.env`** and **`backend/kubernetes/env/.env.runtime-secrets`** are gitignored; only **`runtime-secrets.env.example`** (placeholders) is committed. After updating the Secret, restart the backend: `kubectl rollout restart deployment/studyjam-k8s-be -n studyjam-k8s`.
+
 For production, prefer **Workload Identity** + **Secret Manager CSI** or **External Secrets** instead of long-lived duplicated secrets in etcd.
+
+### Secure secret workflow (recommended for labs)
+
+Follow these practices so credentials are not exposed in shell history, screen shares, or Git.
+
+| Practice | Why |
+|----------|-----|
+| **Use Cloud Shell** (or a dedicated admin machine) for `kubectl` / `gcloud` secret commands | Reduces copy-paste of secrets into local notes or chat |
+| **Prefer reading from Secret Manager in the shell** (example under `kubectl` above) instead of typing passwords | Single source of truth; no duplicate plaintext |
+| **Never commit** Secret YAML, `.env` with production values, or `stringData` dumps to the repo | Git history is forever |
+| **Use `set +o history`** or `HISTCONTROL=ignorespace` and a leading space on sensitive lines in Bash if you must paste literals | Lowers risk of secrets in `~/.bash_history` |
+| **Prefer apply with dry-run from stdin** | `kubectl create secret ... --dry-run=client -o yaml \| kubectl apply -f -` avoids temporary files on disk |
+| **Verify without printing values** | `kubectl get secret studyjam-k8s-runtime -n studyjam-k8s` (check **DATA** = 2); list key names only: `kubectl get secret studyjam-k8s-runtime -n studyjam-k8s -o go-template='{{range $k,$v := .data}}{{$k}}{{"\n"}}{{end}}'` |
+| **After Console-only deploys**, ensure **`kubectl set env deploy/studyjam-k8s-be -n studyjam-k8s --from=secret/studyjam-k8s-runtime`** or equivalent `secretKeyRef` | Console often wires only the ConfigMap |
+| **Rotate** in Secret Manager and re-create the Kubernetes Secret if exposure is suspected | Treat cluster Secret as a cache of Secret Manager for this lab |
 
 ---
 
 ## Step 6 — ConfigMap for non-sensitive backend env
 
+**Recommended if you use [Step 7](#step-7--deploy-workloads-kustomize--gke-friendly-manifests):** put values in **[`backend/kubernetes/configmap.yaml`](./backend/kubernetes/configmap.yaml)** (replace **`DB_HOST`**, **`FRONTEND_URL`**) and run **`kubectl apply -k backend/kubernetes`** — you can skip the imperative `kubectl create configmap` below if that file is your source of truth.
+
 ### Google Cloud Console
 
-In the same cluster **Configuration** area → **ConfigMaps** → **Create**, name **`studyjam-backend-config`**, namespace **`studyjam`**, and add key/value pairs:
+In the same cluster **Configuration** area → **ConfigMaps** → **Create**, name **`studyjam-k8s-backend-config`**, namespace **`studyjam-k8s`**, and add key/value pairs:
 
 | Key | Example value |
 |-----|----------------|
@@ -262,8 +309,8 @@ In the same cluster **Configuration** area → **ConfigMaps** → **Create**, na
 Replace **`CLOUD_SQL_PRIVATE_IP`** with your database private IP.
 
 ```bash
-kubectl create configmap studyjam-backend-config \
-  --namespace=studyjam \
+kubectl create configmap studyjam-k8s-backend-config \
+  --namespace=studyjam-k8s \
   --from-literal=NODE_ENV=production \
   --from-literal=PORT=3000 \
   --from-literal=DB_HOST=CLOUD_SQL_PRIVATE_IP \
@@ -275,241 +322,103 @@ kubectl create configmap studyjam-backend-config \
 
 ---
 
-## Step 7 — Deploy backend and frontend
+## Step 6b — Confirm configuration (checklist)
+
+Use this checklist **after** the Secret and ConfigMap exist and **before** you rely on user traffic. Run commands in Cloud Shell (or anywhere **`kubectl`** targets your cluster, e.g. **`studyjam-k8s-v2`**).
+
+### Before `kubectl apply`
+
+| Check | Command or action |
+|-------|-------------------|
+| **Cluster context** | `kubectl config current-context` → should be a `gke_...` context, not `localhost` |
+| **Namespace** | `kubectl get namespace studyjam-k8s` → **Active** |
+| **Secret** | `kubectl get secret studyjam-k8s-runtime -n studyjam-k8s` → **Opaque**, **DATA** = **2** |
+| **Secret keys (names only)** | `kubectl get secret studyjam-k8s-runtime -n studyjam-k8s -o go-template='{{range $k,$v := .data}}{{$k}}{{"\n"}}{{end}}'` → **`DB_PASSWORD`**, **`JWT_SECRET`** |
+| **Local env file (if you use it)** | [`backend/kubernetes/env/runtime-secrets.env`](./backend/kubernetes/env/runtime-secrets.env.example) is gitignored; only the **`.example`** file is in Git ([Step 5](#runnable-sync-from-a-local-env-file-env-style-recommended-for-repeatability)) |
+| **ConfigMap `DB_HOST`** | Must be Cloud SQL **private IP**, not `REPLACE_CLOUD_SQL_PRIVATE_IP` |
+| **ConfigMap `FRONTEND_URL`** | Matches browser origin for CORS (scheme + host) |
+| **Ingress host** | Edit [`backend/kubernetes/ingress.yaml`](./backend/kubernetes/ingress.yaml) if you do not use `studyjam.example.com` |
+| **Image tags** | In `deployment-*.yaml`, tags (e.g. `:gke-latest`) exist in Artifact Registry |
+
+### After `kubectl apply -k backend/kubernetes`
+
+| Check | Command |
+|-------|---------|
+| **Pods** | `kubectl get pods -n studyjam-k8s` |
+| **Backend rollout** | `kubectl rollout status deployment/studyjam-k8s-be -n studyjam-k8s` |
+| **Logs** | `kubectl logs -n studyjam-k8s deploy/studyjam-k8s-be --tail=40` |
+| **Backend has Secret env** | `kubectl get deploy studyjam-k8s-be -n studyjam-k8s -o yaml \| grep -A2 secretKeyRef` |
+| **Ingress address** | `kubectl get ingress -n studyjam-k8s` |
+
+---
+
+## Step 7 — Deploy workloads (Kustomize + GKE-friendly manifests)
+
+Manifests live under **[`backend/kubernetes/`](./backend/kubernetes/)**. Layout follows common Kubernetes conventions GKE and CI tools work well with:
+
+- **`kustomization.yaml`** — sets namespace **`studyjam-k8s`**, recommended **`app.kubernetes.io/*` labels** (no selector churn), ordered resources.
+- **One resource kind per file** — `deployment-backend.yaml`, `service-backend.yaml`, etc.
+- **Secrets are not in Git** — create **`studyjam-k8s-runtime`** separately ([Step 5](#step-5--kubernetes-secrets-db-password-and-jwt)).
+- **Migration Job is separate** — `job-migrate.yaml` is **not** in the default Kustomize bundle (Jobs are usually applied once per schema change).
+
+### Apply (Cloud Shell or local, repo root)
+
+1. Edit **[`backend/kubernetes/configmap.yaml`](./backend/kubernetes/configmap.yaml)** — set **`DB_HOST`**, **`FRONTEND_URL`**, and adjust **[`backend/kubernetes/ingress.yaml`](./backend/kubernetes/ingress.yaml)** **`host`** if needed.
+2. Ensure [Step 5](#step-5--kubernetes-secrets-db-password-and-jwt) Secret exists.
+3. Run:
+
+```bash
+kubectl apply -k backend/kubernetes
+kubectl rollout status deployment/studyjam-k8s-be -n studyjam-k8s
+kubectl rollout status deployment/studyjam-k8s-fe -n studyjam-k8s
+kubectl get pods,svc,ingress -n studyjam-k8s
+```
+
+**Preview** what will be applied (no cluster changes):
+
+```bash
+kubectl kustomize backend/kubernetes
+```
+
+**GKE Console / automated deploy:** point “apply directory” or your pipeline at **`backend/kubernetes`** and run the same **`kubectl apply -k backend/kubernetes`** (Cloud Build step, GitOps, etc.).
 
 ### Google Cloud Console (wizard)
 
-For each app, you can use **Workloads** → **Deploy** → **Existing container image** → browse **Artifact Registry**, set **Namespace** to **`studyjam`**, container port **3000** (backend) or **8080** (frontend), and under **Environment variables** attach values from the **ConfigMap** and **Secret** (modern Console UIs let you reference secret keys for `DB_PASSWORD` and `JWT_SECRET`). Expose each workload with a **ClusterIP** Service on the same port.
+You can still use **Workloads** → **Deploy** → **Existing container image** — set **Namespace** **`studyjam-k8s`**, ports **3000** / **8080**, and attach **both** ConfigMap **and** Secret keys **`DB_PASSWORD`**, **`JWT_SECRET`**.
 
-The wizard is workable for **simple** deployments. If you cannot map **all** env vars and secret references the way the YAML below does, use **Apply YAML** (next subsection) instead.
+> **Console pitfall:** Wiring **only** the ConfigMap causes **CrashLoopBackOff**. Fix with **`kubectl set env deployment/studyjam-k8s-be -n studyjam-k8s --from=secret/studyjam-k8s-runtime`** or re-apply from **`backend/kubernetes`** ([`deployment-backend.yaml`](./backend/kubernetes/deployment-backend.yaml) already includes `secretKeyRef`).
 
-### Apply YAML (Console or Cloud Shell)
-
-In **Kubernetes Engine** → your cluster → open **Cloud Shell** and run `kubectl apply -f ...`, or use **Deploy** → **Apply manifest** / **YAML** if your Console exposes it. **Update image tags** in the YAML to match Artifact Registry (e.g. `:latest`).
-
-Save the following as files (e.g. `k8s/backend.yaml`, `k8s/frontend.yaml`) or apply from stdin. **Update image tags** if you did not use `:gke-latest`.
-
-### `backend-deployment.yaml`
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: studyjam-backend
-  namespace: studyjam
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: studyjam-backend
-  template:
-    metadata:
-      labels:
-        app: studyjam-backend
-    spec:
-      containers:
-        - name: backend
-          image: africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-backend:gke-latest
-          ports:
-            - containerPort: 3000
-          envFrom:
-            - configMapRef:
-                name: studyjam-backend-config
-          env:
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: studyjam-runtime
-                  key: DB_PASSWORD
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: studyjam-runtime
-                  key: JWT_SECRET
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 10
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 15
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: studyjam-backend
-  namespace: studyjam
-spec:
-  type: ClusterIP
-  selector:
-    app: studyjam-backend
-  ports:
-    - port: 3000
-      targetPort: 3000
-```
 
-### `frontend-deployment.yaml`
+## Step 8 — Ingress IP and DNS
 
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: studyjam-frontend
-  namespace: studyjam
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: studyjam-frontend
-  template:
-    metadata:
-      labels:
-        app: studyjam-frontend
-    spec:
-      containers:
-        - name: frontend
-          image: africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-frontend:gke-latest
-          ports:
-            - containerPort: 8080
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 5
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: studyjam-frontend
-  namespace: studyjam
-spec:
-  type: ClusterIP
-  selector:
-    app: studyjam-frontend
-  ports:
-    - port: 8080
-      targetPort: 8080
-```
-
-Apply:
+**Ingress** is included in **`kubectl apply -k backend/kubernetes`** ([`backend/kubernetes/ingress.yaml`](./backend/kubernetes/ingress.yaml)). GKE provisions an HTTP(S) load balancer; paths **`/health`** and **`/api`** go to **`studyjam-k8s-be`**, **`/`** to **`studyjam-k8s-fe`**.
 
 ```bash
-kubectl apply -f backend-deployment.yaml
-kubectl apply -f frontend-deployment.yaml
-kubectl get pods -n studyjam -w
+kubectl get ingress -n studyjam-k8s
 ```
 
----
-
-## Step 8 — Ingress (single host)
-
-This uses GKE’s **Ingress** controller (creates a Google HTTP(S) load balancer). Paths are ordered so **`/health`** and **`/api`** hit the backend; everything else goes to the SPA.
-
-**Console:** **Kubernetes Engine** → **Services & Ingress** (or **Networking** for your cluster) → **Create Ingress**. Multi-path routing to two different Services is easiest if the UI offers a YAML editor; otherwise paste the manifest below into Cloud Shell: `kubectl apply -f ingress.yaml`.
-
-### `ingress.yaml`
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: studyjam-ingress
-  namespace: studyjam
-  annotations:
-    kubernetes.io/ingress.class: "gce"
-spec:
-  rules:
-    - host: studyjam.example.com
-      http:
-        paths:
-          - path: /health
-            pathType: Prefix
-            backend:
-              service:
-                name: studyjam-backend
-                port:
-                  number: 3000
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: studyjam-backend
-                port:
-                  number: 3000
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: studyjam-frontend
-                port:
-                  number: 8080
-```
-
-```bash
-kubectl apply -f ingress.yaml
-kubectl get ingress -n studyjam
-```
-
-1. Wait until **ADDRESS** is assigned on the Ingress.
-2. Point **`studyjam.example.com`** (DNS A record) at that IP, or use the IP with **nip.io** for testing.
-3. For **HTTPS**, add a **ManagedCertificate** (GKE) or use **cert-manager** — details depend on your class requirements; HTTP alone is enough to validate routing in some labs.
+1. Wait until **ADDRESS** is assigned.
+2. Point your **`spec.rules[0].host`** (e.g. **`studyjam.example.com`**) at that IP via DNS or **`/etc/hosts`**; **nip.io** works for quick tests.
+3. For **HTTPS**, use a **ManagedCertificate** or **cert-manager** if your course requires TLS.
 
 ---
 
 ## Step 9 — Run database migrations (Kubernetes Job)
 
-Same image as the API; override the command to run Drizzle migrations (matches [GCP-SETUP.md](./GCP-SETUP.md) Cloud Run command split: `node` + `dist/database/migrate.js`).
-
-**Console:** Some Console versions let you create a **Job** under **Workloads** → **Create** → **Job**. If yours does not, use Cloud Shell: `kubectl apply -f migrate-job.yaml`, then **Workloads** → **Jobs** → `studyjam-migrate` → **Logs**.
-
-### `migrate-job.yaml`
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: studyjam-migrate
-  namespace: studyjam
-spec:
-  ttlSecondsAfterFinished: 300
-  template:
-    spec:
-      restartPolicy: Never
-      containers:
-        - name: migrate
-          image: africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-backend:gke-latest
-          command: ["node", "dist/database/migrate.js"]
-          envFrom:
-            - configMapRef:
-                name: studyjam-backend-config
-          env:
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: studyjam-runtime
-                  key: DB_PASSWORD
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: studyjam-runtime
-                  key: JWT_SECRET
-```
+Same image as the API; command **`node dist/database/migrate.js`** (see [GCP-SETUP.md](./GCP-SETUP.md)). Apply **after** the base stack and reachable DB:
 
 ```bash
-kubectl apply -f migrate-job.yaml
-kubectl logs -n studyjam job/studyjam-migrate -f
+kubectl apply -f backend/kubernetes/job-migrate.yaml
+kubectl logs -n studyjam-k8s job/studyjam-k8s-migrate -f
 ```
 
-Expect **`Migrations complete.`** in logs. If the job fails, fix networking or credentials, then delete the job and re-apply:
+**Console:** **Workloads** → **Jobs** → **`studyjam-k8s-migrate`** → **Logs**.
+
+Expect **`Migrations complete.`** in logs. On failure, delete and re-apply:
 
 ```bash
-kubectl delete job studyjam-migrate -n studyjam
+kubectl delete job studyjam-k8s-migrate -n studyjam-k8s
 ```
 
 ---
@@ -536,13 +445,13 @@ SELECT * FROM drizzle_migrations;
 
 ## Step 11 — Tear down (optional)
 
-- **Console:** **Kubernetes Engine** → **Clusters** → **`studyjam-gke`** → **Delete**; delete individual **Workloads** / the **`studyjam`** namespace from the cluster UI if you prefer not to use CLI.
+- **Console:** **Kubernetes Engine** → **Clusters** → **`studyjam-k8s-v2`** → **Delete**; delete individual **Workloads** / the **`studyjam-k8s`** namespace from the cluster UI if you prefer not to use CLI.
 - **Cloud Shell / CLI:**
 
 ```bash
-kubectl delete namespace studyjam
+kubectl delete namespace studyjam-k8s
 
-gcloud container clusters delete studyjam-gke \
+gcloud container clusters delete studyjam-k8s-v2 \
   --region=africa-south1 \
   --project=dvt-lab-devfest-2025
 ```
@@ -559,12 +468,12 @@ Browser
    ▼
 GKE Ingress (HTTP(S) LB)
    │
-   ├─► /health, /api/*  ──► Service studyjam-backend:3000  ──► Pods (NestJS)
+   ├─► /health, /api/*  ──► Service studyjam-k8s-be:3000  ──► Pods (NestJS)
    │                                                      │
    │                                                      ▼
    │                                              Cloud SQL (private IP)
    │
-   └─► /                ──► Service studyjam-frontend:8080 ──► Pods (nginx + static)
+   └─► /                ──► Service studyjam-k8s-fe:8080 ──► Pods (nginx + static)
 ```
 
 ---
@@ -579,19 +488,21 @@ GKE **Autopilot** bills per pod resource requests; **Standard** bills for nodes 
 
 | Issue | What to check |
 |-------|----------------|
-| Pods `CrashLoopBackOff` | `kubectl logs -n studyjam deploy/studyjam-backend`; verify `DB_HOST`, secrets, and image tag |
-| **`JwtStrategy requires a secret or key` / JWT missing** | Kubernetes Secret **`studyjam-runtime`** in namespace **`studyjam`** must exist with non-empty keys **`JWT_SECRET`** and **`DB_PASSWORD`** (exact spelling). Cloud Run gets these from `--set-secrets`; GKE needs [this step](#why-cloud-run-works-but-gke-fails-until-you-do-this-step). Confirm: `kubectl get secret studyjam-runtime -n studyjam` |
+| Pods `CrashLoopBackOff` | `kubectl logs -n studyjam-k8s deploy/studyjam-k8s-be`; verify `DB_HOST`, secrets, and image tag |
+| **CrashLoop after Console deploy — env only from ConfigMap** | Inspect YAML: container must include **`DB_PASSWORD`** and **`JWT_SECRET`** via **`secretKeyRef`** (Secret **`studyjam-k8s-runtime`**). ConfigMap-only env → missing JWT/DB password. `kubectl set env deploy/studyjam-k8s-be -n studyjam-k8s --from=secret/studyjam-k8s-runtime` or apply [`backend/kubernetes`](./backend/kubernetes/). |
+| **`JwtStrategy requires a secret or key` / JWT missing** | Kubernetes Secret **`studyjam-k8s-runtime`** in namespace **`studyjam-k8s`** must exist with non-empty keys **`JWT_SECRET`** and **`DB_PASSWORD`** (exact spelling). Cloud Run gets these from `--set-secrets`; GKE needs [this step](#why-cloud-run-works-but-gke-fails-until-you-do-this-step). Confirm: `kubectl get secret studyjam-k8s-runtime -n studyjam-k8s` |
 | DB connection timeouts | Firewall, VPC, Cloud SQL **private IP**; same region/VPC as cluster |
 | Ingress 404 / wrong backend | Path order in Ingress; backend prefix `/api` and bare `/health` |
 | CORS errors in browser | `FRONTEND_URL` in ConfigMap must **exactly** match the browser origin (scheme + host, no trailing slash mismatch) |
 | Frontend calls wrong API | Rebuild frontend image with correct **`VITE_API_URL`**; it is compile-time |
 | Migration job hangs | Same as DB connectivity from pods; ensure Job uses same env as Deployment |
+| **`connection refused` to `127.0.0.1:8080` / `localhost:8080`** | `kubectl` has **no cluster context** (default API server). Run **`gcloud container clusters get-credentials studyjam-k8s-v2 --region=africa-south1 --project=dvt-lab-devfest-2025`** (or use **GKE → cluster → Connect → Run in Cloud Shell**). Then `kubectl config current-context` should show `gke_...`, not localhost. |
 
 ---
 
 ## Optional extensions
 
-- **Horizontal Pod Autoscaler** on CPU for `studyjam-backend` and `studyjam-frontend`
+- **Horizontal Pod Autoscaler** on CPU for `studyjam-k8s-be` and `studyjam-k8s-fe`
 - **Cloud Build** trigger that builds/pushes images and runs **`kubectl apply`** (or Helm) with a deploy service account
 - **Workload Identity** for pods calling Secret Manager without duplicating secrets into Kubernetes
 - **Cloud SQL Auth Proxy** as a sidecar if you prefer not to use private IP routing from pods

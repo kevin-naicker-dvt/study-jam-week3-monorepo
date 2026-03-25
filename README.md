@@ -49,6 +49,7 @@ study-jam-week3-monorepo/
 │   ├── teardown-gcp.sh     # Clean up GCP resources
 │   └── run-migrations.sh   # Run DB migrations via Cloud SQL Proxy
 ├── docker-compose.yml      # Local development
+├── backend/kubernetes/         # GKE manifests (Kustomize); Secret from env: env/runtime-secrets.env.example → job-apply-runtime-secret-from-env.sh or kubectl apply -k backend/kubernetes/secret-from-env
 ├── cloudbuild.yaml         # GCP CI/CD pipeline
 ├── GCP-SETUP.md            # Manual GCP setup (Cloud Run)
 ├── GKE-SETUP.md            # GKE lab (Kubernetes on same GCP project)
@@ -107,7 +108,7 @@ npm run dev
 Follow the step-by-step guide: **[GCP-SETUP.md](./GCP-SETUP.md)**
 
 ### Option 1b — GKE Lab (Kubernetes)
-Deploy the same app to **GKE** using existing Cloud SQL, Artifact Registry, and secrets: **[GKE-SETUP.md](./GKE-SETUP.md)** (or the **[HTML manual](./GKE-SETUP.html)** for presenting / reading in the browser). **Important:** GKE needs a **Kubernetes Secret** for `DB_PASSWORD` and `JWT_SECRET` in the cluster (Secret Manager alone is not injected into Pods like Cloud Run’s `--set-secrets`) — see GKE-SETUP **Step 5**.
+Deploy the same app to **GKE** using existing Cloud SQL, Artifact Registry, and secrets: **[GKE-SETUP.md](./GKE-SETUP.md)** (or the **[HTML manual](./GKE-SETUP.html)** for presenting / reading in the browser). **Important:** GKE needs a **Kubernetes Secret** for `DB_PASSWORD` and `JWT_SECRET` (**`studyjam-k8s-runtime`** in namespace **`studyjam-k8s`**) — see GKE-SETUP **Step 5** and **`backend/kubernetes/`** (`kubectl apply -k backend/kubernetes`). Secret Manager alone is not injected into Pods like Cloud Run’s `--set-secrets`.
 
 ### Option 2 — Automated Setup (Advanced)
 ```bash

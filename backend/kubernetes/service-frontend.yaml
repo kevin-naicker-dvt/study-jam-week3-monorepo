@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: studyjam-k8s-fe
+  labels:
+    app.kubernetes.io/name: studyjam-frontend
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: studyjam-week3
+spec:
+  type: ClusterIP
+  selector:
+    app: studyjam-k8s-fe
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http

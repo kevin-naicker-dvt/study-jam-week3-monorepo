@@ -1,0 +1,39 @@
+# Run after backend/kubernetes base is applied and DB is reachable (one-off per migration).
+# kubectl apply -f backend/kubernetes/job-migrate.yaml
+# Re-run after failure: kubectl delete job studyjam-k8s-migrate -n studyjam-k8s && kubectl apply -f backend/kubernetes/job-migrate.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: studyjam-k8s-migrate
+  namespace: studyjam-k8s
+  labels:
+    app.kubernetes.io/name: studyjam-migrate
+    app.kubernetes.io/component: migrate
+    app.kubernetes.io/part-of: studyjam-week3
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: studyjam-migrate
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-backend:gke-latest
+          command: ["node", "dist/database/migrate.js"]
+          envFrom:
+            - configMapRef:
+                name: studyjam-k8s-backend-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: studyjam-k8s-runtime
+                  key: DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: studyjam-k8s-runtime
+                  key: JWT_SECRET
