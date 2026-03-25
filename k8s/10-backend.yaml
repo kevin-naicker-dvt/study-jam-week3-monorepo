@@ -1,3 +1,7 @@
+# Requires Secret studyjam-runtime in namespace studyjam with keys DB_PASSWORD and JWT_SECRET
+# (exact names; empty values will still crash the app). Example:
+#   kubectl create secret generic studyjam-runtime -n studyjam \
+#     --from-literal=DB_PASSWORD='...' --from-literal=JWT_SECRET='...'
 apiVersion: apps/v1
 kind: Deployment
 metadata:

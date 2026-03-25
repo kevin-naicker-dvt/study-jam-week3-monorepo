@@ -172,6 +172,8 @@
     .callout.tip .callout-body h4 { color: #137333; }
     .callout.info   { background: #e8f0fe; border-left: 4px solid var(--blue); }
     .callout.info .callout-body h4 { color: var(--blue-dk); }
+    .callout.warn   { background: #fef7e0; border-left: 4px solid var(--orange); }
+    .callout.warn .callout-body h4 { color: #b06000; }
 
     .arch {
       background: linear-gradient(160deg, #1e2936 0%, #252b38 100%);
@@ -324,6 +326,11 @@
               <td>Scaling</td>
               <td>Automatic</td>
               <td>HPA / cluster autoscaler (configurable)</td>
+            </tr>
+            <tr>
+              <td><code>DB_PASSWORD</code> / <code>JWT_SECRET</code></td>
+              <td><code>gcloud run deploy --set-secrets</code> maps Secret Manager → env vars</td>
+              <td>You create a <strong>Kubernetes Secret</strong> in the cluster (e.g. <code>studyjam-runtime</code>); GKE does not read Secret Manager automatically unless you add CSI / External Secrets</td>
             </tr>
           </tbody>
         </table>
@@ -535,6 +542,13 @@ docker push africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/stud
         <div>
           <h2>Step 5 — Kubernetes secrets</h2>
           <p>DB password and JWT</p>
+        </div>
+      </div>
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body">
+          <h4>Why Cloud Run works but GKE needs this step</h4>
+          <p>The <strong>same image</strong> expects <code>DB_PASSWORD</code> and <code>JWT_SECRET</code> in the environment. On <strong>Cloud Run</strong>, <code>cloudbuild.yaml</code> uses <code>--set-secrets</code> so GCP Secret Manager values are injected at deploy time. <strong>GKE does not do that</strong> — you must create a <strong>Kubernetes Secret</strong> (<code>studyjam-runtime</code> with those exact keys) in namespace <code>studyjam</code>, as below. Otherwise the backend may crash with <strong>JwtStrategy requires a secret or key</strong>. After updating the Secret, run <code>kubectl rollout restart deployment/studyjam-backend -n studyjam</code>.</p>
         </div>
       </div>
       <div class="subcard">
@@ -890,6 +904,7 @@ GKE Ingress (HTTP(S) LB)
           </thead>
           <tbody>
             <tr><td>Pods <code>CrashLoopBackOff</code></td><td><code>kubectl logs</code>; <code>DB_HOST</code>, secrets, image tag</td></tr>
+            <tr><td><code>JwtStrategy requires a secret or key</code> / JWT missing</td><td>Kubernetes Secret <code>studyjam-runtime</code> in <code>studyjam</code> with non-empty <code>JWT_SECRET</code> and <code>DB_PASSWORD</code> (Cloud Run uses <code>--set-secrets</code>; GKE needs <a href="#step-5">Step 5</a>). <code>kubectl get secret studyjam-runtime -n studyjam</code></td></tr>
             <tr><td>DB connection timeouts</td><td>Firewall, VPC, Cloud SQL private IP, same region/VPC</td></tr>
             <tr><td>Ingress 404 / wrong backend</td><td>Path order; <code>/api</code> and <code>/health</code></td></tr>
             <tr><td>CORS errors</td><td><code>FRONTEND_URL</code> must match browser origin exactly</td></tr>

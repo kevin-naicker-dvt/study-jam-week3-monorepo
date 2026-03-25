@@ -19,6 +19,7 @@
 | Public HTTP | Cloud Run URLs | **Ingress** (or `LoadBalancer` services) |
 | Frontend `VITE_API_URL` | Injected in Cloud Build from Run URL | You choose a **stable URL** (Ingress hostname) **before** building the frontend image |
 | Scaling | Automatic | HPA / cluster autoscaler (configurable) |
+| **`DB_PASSWORD` / `JWT_SECRET`** | Cloud Run **`--set-secrets`** maps [Secret Manager](https://console.cloud.google.com/security/secret-manager) secrets → container env vars at deploy time | You must create a **Kubernetes Secret** in the cluster (this guide uses `studyjam-runtime` with keys `DB_PASSWORD` and `JWT_SECRET`). GKE does **not** pull from Secret Manager unless you add CSI / External Secrets / sync |
 
 The backend serves **`/health`** (no `/api` prefix) and **`/api/*`** for the API ([`main.ts`](backend/src/main.ts)). The production frontend listens on **8080** (nginx); the backend on **3000**.
 
@@ -188,6 +189,21 @@ docker push africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/stud
 ---
 
 ## Step 5 — Kubernetes secrets (DB password and JWT)
+
+### Why Cloud Run works but GKE fails until you do this step
+
+The **same Docker image** reads **`DB_PASSWORD`** and **`JWT_SECRET`** from the process environment. Nothing about NestJS or the image changes between Cloud Run and GKE.
+
+| | Cloud Run ([GCP-SETUP.md](./GCP-SETUP.md), [`cloudbuild.yaml`](./cloudbuild.yaml)) | GKE (this lab, [`k8s/10-backend.yaml`](./k8s/10-backend.yaml)) |
+|---|----------------------|-----|
+| **Where secrets live in GCP** | Secret Manager secrets `studyjam-db-password` and `studyjam-jwt-secret` (from [GCP-SETUP Step 5](./GCP-SETUP.md#step-5--store-secrets-in-secret-manager)) | Same — you still use those values |
+| **How they get into the container** | **`gcloud run deploy --set-secrets=...`** binds each GCP secret to an **environment variable name** (`DB_PASSWORD`, `JWT_SECRET`) on the Cloud Run service | Kubernetes only sees **Kubernetes `Secret` objects**. You must **`kubectl create secret …`** (or Console) in namespace **`studyjam`**, name **`studyjam-runtime`**, with keys **`DB_PASSWORD`** and **`JWT_SECRET`** — then the Deployment uses `secretKeyRef` |
+
+**Typical symptom if you skip the Kubernetes Secret:** backend crashes on startup with **`JwtStrategy requires a secret or key`** (or a message that **`JWT_SECRET` is missing or empty**) because the pod never received those env vars.
+
+**Fix:** complete the steps below (or pull from Secret Manager into the K8s Secret using the `gcloud secrets versions access` example). After changing the Secret, restart the Deployment: `kubectl rollout restart deployment/studyjam-backend -n studyjam`.
+
+---
 
 ### Google Cloud Console
 
@@ -564,6 +580,7 @@ GKE **Autopilot** bills per pod resource requests; **Standard** bills for nodes 
 | Issue | What to check |
 |-------|----------------|
 | Pods `CrashLoopBackOff` | `kubectl logs -n studyjam deploy/studyjam-backend`; verify `DB_HOST`, secrets, and image tag |
+| **`JwtStrategy requires a secret or key` / JWT missing** | Kubernetes Secret **`studyjam-runtime`** in namespace **`studyjam`** must exist with non-empty keys **`JWT_SECRET`** and **`DB_PASSWORD`** (exact spelling). Cloud Run gets these from `--set-secrets`; GKE needs [this step](#why-cloud-run-works-but-gke-fails-until-you-do-this-step). Confirm: `kubectl get secret studyjam-runtime -n studyjam` |
 | DB connection timeouts | Firewall, VPC, Cloud SQL **private IP**; same region/VPC as cluster |
 | Ingress 404 / wrong backend | Path order in Ingress; backend prefix `/api` and bare `/health` |
 | CORS errors in browser | `FRONTEND_URL` in ConfigMap must **exactly** match the browser origin (scheme + host, no trailing slash mismatch) |

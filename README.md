@@ -107,7 +107,7 @@ npm run dev
 Follow the step-by-step guide: **[GCP-SETUP.md](./GCP-SETUP.md)**
 
 ### Option 1b — GKE Lab (Kubernetes)
-Deploy the same app to **GKE** using existing Cloud SQL, Artifact Registry, and secrets: **[GKE-SETUP.md](./GKE-SETUP.md)** (or the **[HTML manual](./GKE-SETUP.html)** for presenting / reading in the browser)
+Deploy the same app to **GKE** using existing Cloud SQL, Artifact Registry, and secrets: **[GKE-SETUP.md](./GKE-SETUP.md)** (or the **[HTML manual](./GKE-SETUP.html)** for presenting / reading in the browser). **Important:** GKE needs a **Kubernetes Secret** for `DB_PASSWORD` and `JWT_SECRET` in the cluster (Secret Manager alone is not injected into Pods like Cloud Run’s `--set-secrets`) — see GKE-SETUP **Step 5**.
 
 ### Option 2 — Automated Setup (Advanced)
 ```bash
