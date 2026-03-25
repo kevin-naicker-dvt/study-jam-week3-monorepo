@@ -1,6 +1,6 @@
-# Run after api/Kubernetes base is applied and DB is reachable (one-off per migration).
-# kubectl apply -f api/Kubernetes/job-migrate.yaml
-# Re-run after failure: kubectl delete job studyjam-k8s-migrate -n studyjam-k8s && kubectl apply -f api/Kubernetes/job-migrate.yaml
+# Run after backend/kubernetes base is applied and DB is reachable (one-off per migration).
+# kubectl apply -f backend/kubernetes/job-migrate.yaml
+# Re-run after failure: kubectl delete job studyjam-k8s-migrate -n studyjam-k8s && kubectl apply -f backend/kubernetes/job-migrate.yaml
 apiVersion: batch/v1
 kind: Job
 metadata:

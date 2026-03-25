@@ -282,7 +282,7 @@
         <li><strong>GCP project:</strong> <code>dvt-lab-devfest-2025</code></li>
         <li><strong>Region:</strong> <code>africa-south1</code></li>
         <li><strong>Companion guide (Cloud Run):</strong> <a href="./GCP-SETUP.md">GCP-SETUP.md</a></li>
-        <li><strong>Kubernetes manifests (Kustomize):</strong> <a href="https://github.com/kevin-naicker-dvt/study-jam-week3-monorepo/tree/main/api/Kubernetes" target="_blank" rel="noopener"><code>api/Kubernetes/</code></a> — <code>kubectl apply -k api/Kubernetes</code></li>
+        <li><strong>Kubernetes manifests (Kustomize):</strong> <a href="https://github.com/kevin-naicker-dvt/study-jam-week3-monorepo/tree/main/backend/kubernetes" target="_blank" rel="noopener"><code>backend/kubernetes/</code></a> — <code>kubectl apply -k backend/kubernetes</code></li>
       </ul>
     </div>
 
@@ -573,6 +573,12 @@ kubectl create secret generic studyjam-k8s-runtime \
   --namespace=studyjam-k8s \
   --from-literal=DB_PASSWORD="$DB_PW" \
   --from-literal=JWT_SECRET="$JWT"</code></pre>
+      <h4>Runnable sync from a local env file (<code>.env</code>-style)</h4>
+      <p>Placeholder file: <code>backend/kubernetes/env/runtime-secrets.env.example</code>. Copy to <code>backend/kubernetes/env/runtime-secrets.env</code> (gitignored), set real values for <code>DB_PASSWORD</code> and <code>JWT_SECRET</code>, then either:</p>
+      <pre><code>./backend/kubernetes/job-apply-runtime-secret-from-env.sh
+# or pass another path: ./backend/kubernetes/job-apply-runtime-secret-from-env.sh /path/to/.env
+kubectl apply -k backend/kubernetes/secret-from-env</code></pre>
+      <p>A Kubernetes <code>Job</code> manifest is not used here—secret literals in a Job spec would be visible in the API. The script pipes the same <code>kubectl create secret … --dry-run</code> pattern as above.</p>
       <div class="callout info">
         <span class="callout-icon">ℹ️</span>
         <div class="callout-body">
@@ -600,7 +606,7 @@ kubectl create secret generic studyjam-k8s-runtime \
           <p>Non-sensitive backend environment</p>
         </div>
       </div>
-      <p><strong>Using Kustomize (Step 7)?</strong> Edit <code>api/Kubernetes/configmap.yaml</code> and apply with <code>kubectl apply -k api/Kubernetes</code> instead of the imperative <code>kubectl create configmap</code> below if you prefer the repo file as source of truth.</p>
+      <p><strong>Using Kustomize (Step 7)?</strong> Edit <code>backend/kubernetes/configmap.yaml</code> and apply with <code>kubectl apply -k backend/kubernetes</code> instead of the imperative <code>kubectl create configmap</code> below if you prefer the repo file as source of truth.</p>
       <p>Console: <strong>ConfigMaps → Create</strong>, name <code>studyjam-k8s-backend-config</code>, namespace <code>studyjam-k8s</code>.</p>
       <div class="table-wrap">
         <table>
@@ -651,22 +657,22 @@ kubectl create secret generic studyjam-k8s-runtime \
         <div class="section-icon icon-blue">7</div>
         <div>
           <h2>Step 7 — Deploy workloads (Kustomize)</h2>
-          <p><code>api/Kubernetes</code> — GKE-friendly layout</p>
+          <p><code>backend/kubernetes</code> — GKE-friendly layout</p>
         </div>
       </div>
-      <p>Repo path: <a href="https://github.com/kevin-naicker-dvt/study-jam-week3-monorepo/tree/main/api/Kubernetes" target="_blank" rel="noopener"><code>api/Kubernetes/</code></a>. Uses <strong>Kustomize</strong> (<code>kustomization.yaml</code>), recommended <code>app.kubernetes.io/*</code> labels, one manifest per resource, namespace <code>studyjam-k8s</code>. <strong>Secrets are not in Git</strong> (create in Step 5). The migration <strong>Job</strong> is <strong>not</strong> in the default bundle — apply it separately (Step 9).</p>
-      <pre><code># Repo root; edit api/Kubernetes/configmap.yaml (DB_HOST, FRONTEND_URL) and ingress host if needed
-kubectl apply -k api/Kubernetes
+      <p>Repo path: <a href="https://github.com/kevin-naicker-dvt/study-jam-week3-monorepo/tree/main/backend/kubernetes" target="_blank" rel="noopener"><code>backend/kubernetes/</code></a>. Uses <strong>Kustomize</strong> (<code>kustomization.yaml</code>), recommended <code>app.kubernetes.io/*</code> labels, one manifest per resource, namespace <code>studyjam-k8s</code>. <strong>Secrets are not in Git</strong> (create in Step 5). The migration <strong>Job</strong> is <strong>not</strong> in the default bundle — apply it separately (Step 9).</p>
+      <pre><code># Repo root; edit backend/kubernetes/configmap.yaml (DB_HOST, FRONTEND_URL) and ingress host if needed
+kubectl apply -k backend/kubernetes
 kubectl rollout status deployment/studyjam-k8s-be -n studyjam-k8s
 kubectl rollout status deployment/studyjam-k8s-fe -n studyjam-k8s
 kubectl get pods,svc,ingress -n studyjam-k8s</code></pre>
-      <p>Preview: <code>kubectl kustomize api/Kubernetes</code></p>
+      <p>Preview: <code>kubectl kustomize backend/kubernetes</code></p>
       <p><strong>Console wizard:</strong> Workloads → Deploy; attach <strong>both</strong> ConfigMap and Secret keys <code>DB_PASSWORD</code>, <code>JWT_SECRET</code>.</p>
       <div class="callout warn">
         <span class="callout-icon">⚠️</span>
         <div class="callout-body">
           <h4>ConfigMap only = CrashLoopBackOff</h4>
-          <p>If the Deployment lacks <code>secretKeyRef</code>, run <code>kubectl set env deployment/studyjam-k8s-be -n studyjam-k8s --from=secret/studyjam-k8s-runtime</code> or apply from <code>api/Kubernetes/deployment-backend.yaml</code>.</p>
+          <p>If the Deployment lacks <code>secretKeyRef</code>, run <code>kubectl set env deployment/studyjam-k8s-be -n studyjam-k8s --from=secret/studyjam-k8s-runtime</code> or apply from <code>backend/kubernetes/deployment-backend.yaml</code>.</p>
         </div>
       </div>
     </div>
@@ -676,11 +682,11 @@ kubectl get pods,svc,ingress -n studyjam-k8s</code></pre>
         <div class="section-icon icon-blue">8</div>
         <div>
           <h2>Step 8 — Ingress IP and DNS</h2>
-          <p>Included in <code>kubectl apply -k api/Kubernetes</code></p>
+          <p>Included in <code>kubectl apply -k backend/kubernetes</code></p>
         </div>
       </div>
       <pre><code>kubectl get ingress -n studyjam-k8s</code></pre>
-      <p>Wait for <strong>ADDRESS</strong>; point <code>spec.rules[0].host</code> at that IP (DNS, <code>/etc/hosts</code>, or nip.io). Edit <code>api/Kubernetes/ingress.yaml</code> before apply if the host is not <code>studyjam.example.com</code>.</p>
+      <p>Wait for <strong>ADDRESS</strong>; point <code>spec.rules[0].host</code> at that IP (DNS, <code>/etc/hosts</code>, or nip.io). Edit <code>backend/kubernetes/ingress.yaml</code> before apply if the host is not <code>studyjam.example.com</code>.</p>
     </div>
 
     <div class="content" id="step-9">
@@ -691,7 +697,7 @@ kubectl get pods,svc,ingress -n studyjam-k8s</code></pre>
           <p>Apply once base stack is up</p>
         </div>
       </div>
-      <pre><code>kubectl apply -f api/Kubernetes/job-migrate.yaml
+      <pre><code>kubectl apply -f backend/kubernetes/job-migrate.yaml
 kubectl logs -n studyjam-k8s job/studyjam-k8s-migrate -f</code></pre>
       <p>Expect <strong>Migrations complete.</strong> On failure: <code>kubectl delete job studyjam-k8s-migrate -n studyjam-k8s</code>, fix, re-apply.</p>
     </div>
@@ -773,7 +779,7 @@ GKE Ingress (HTTP(S) LB)
           </thead>
           <tbody>
             <tr><td>Pods <code>CrashLoopBackOff</code></td><td><code>kubectl logs</code>; <code>DB_HOST</code>, secrets, image tag</td></tr>
-            <tr><td>CrashLoop after Console — env only from ConfigMap</td><td>Deployment needs <code>secretKeyRef</code> for <code>DB_PASSWORD</code> and <code>JWT_SECRET</code> (Secret <code>studyjam-k8s-runtime</code>). <code>kubectl set env deploy/studyjam-k8s-be -n studyjam-k8s --from=secret/studyjam-k8s-runtime</code> or <code>kubectl apply -k api/Kubernetes</code>.</td></tr>
+            <tr><td>CrashLoop after Console — env only from ConfigMap</td><td>Deployment needs <code>secretKeyRef</code> for <code>DB_PASSWORD</code> and <code>JWT_SECRET</code> (Secret <code>studyjam-k8s-runtime</code>). <code>kubectl set env deploy/studyjam-k8s-be -n studyjam-k8s --from=secret/studyjam-k8s-runtime</code> or <code>kubectl apply -k backend/kubernetes</code>.</td></tr>
             <tr><td><code>JwtStrategy requires a secret or key</code> / JWT missing</td><td>Kubernetes Secret <code>studyjam-k8s-runtime</code> in <code>studyjam-k8s</code> with non-empty <code>JWT_SECRET</code> and <code>DB_PASSWORD</code> (Cloud Run uses <code>--set-secrets</code>; GKE needs <a href="#step-5">Step 5</a>). <code>kubectl get secret studyjam-k8s-runtime -n studyjam-k8s</code></td></tr>
             <tr><td>DB connection timeouts</td><td>Firewall, VPC, Cloud SQL private IP, same region/VPC</td></tr>
             <tr><td>Ingress 404 / wrong backend</td><td>Path order; <code>/api</code> and <code>/health</code></td></tr>

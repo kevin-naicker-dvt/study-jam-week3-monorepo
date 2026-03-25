@@ -1,8 +1,11 @@
 # Standard layout for GKE / kubectl / CI: one namespace, Kustomize injects metadata.namespace.
 # Apply: from repo root, with kubectl connected to your cluster:
-#   kubectl apply -k api/Kubernetes
+#   kubectl apply -k backend/kubernetes
+# Runtime Secret (DB_PASSWORD, JWT_SECRET) from local .env — before backend, not in Git:
+#   ./backend/kubernetes/job-apply-runtime-secret-from-env.sh
+#   # or: kubectl apply -k backend/kubernetes/secret-from-env
 # Migration job (run once per schema change; not part of default apply):
-#   kubectl apply -f api/Kubernetes/job-migrate.yaml
+#   kubectl apply -f backend/kubernetes/job-migrate.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
