@@ -121,6 +121,8 @@ Go to **APIs & Services > Library** and enable:
 
 > **Tip:** Generate a JWT secret: `openssl rand -base64 64`
 
+> **Deploying to GKE later?** Secret Manager stores the values, but **Kubernetes does not read Secret Manager by default.** The [GKE lab](./GKE-SETUP.md) has an extra step: create a **Kubernetes Secret** in the cluster (e.g. `studyjam-runtime` with keys `DB_PASSWORD` and `JWT_SECRET`) so Pods get the same env vars Cloud Run receives from **`gcloud run deploy --set-secrets`**. See **GKE-SETUP.md → Step 5** (“Why Cloud Run works but GKE fails until you do this step”).
+
 ---
 
 ## Step 6 — Create Service Accounts

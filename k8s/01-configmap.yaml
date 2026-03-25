@@ -1,0 +1,15 @@
+# Edit DB_HOST (Cloud SQL private IP) and FRONTEND_URL (browser origin, matches Ingress / TLS).
+# Create the Secret separately: see GKE-SETUP.md Step 5 (studyjam-runtime: DB_PASSWORD, JWT_SECRET).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: studyjam-backend-config
+  namespace: studyjam
+data:
+  NODE_ENV: production
+  PORT: "3000"
+  DB_HOST: REPLACE_CLOUD_SQL_PRIVATE_IP
+  DB_PORT: "5432"
+  DB_NAME: studyjam
+  DB_USER: studyjam_user
+  FRONTEND_URL: https://studyjam.example.com

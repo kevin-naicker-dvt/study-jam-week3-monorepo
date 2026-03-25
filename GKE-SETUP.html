@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GKE Lab — Study Jam Week 3</title>
+  <style>
+    :root {
+      --k8s-blue: #326ce5;
+      --k8s-blue-dk: #1e40af;
+      --blue: #1a73e8;
+      --blue-dk: #0d47a1;
+      --green: #1e8e3e;
+      --red: #d93025;
+      --orange: #e8710a;
+      --yellow: #f9ab00;
+      --grey-1: #f8f9fa;
+      --grey-2: #e8eaed;
+      --grey-3: #9aa0a6;
+      --grey-4: #5f6368;
+      --grey-5: #202124;
+      --font: 'Segoe UI', system-ui, sans-serif;
+      --mono: 'Consolas', 'Courier New', monospace;
+      --radius: 8px;
+      --shadow: 0 1px 4px rgba(0,0,0,.15);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      color: var(--grey-5);
+      background: #fff;
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    .layout { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 272px;
+      min-width: 272px;
+      background: var(--grey-5);
+      color: #fff;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 0 0 32px;
+      flex-shrink: 0;
+    }
+    .sidebar-brand {
+      background: linear-gradient(135deg, var(--k8s-blue-dk), var(--k8s-blue));
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+    .sidebar-brand h1 { font-size: 15px; font-weight: 700; letter-spacing: .4px; color: #fff; }
+    .sidebar-brand p  { font-size: 11px; color: rgba(255,255,255,.75); margin-top: 6px; line-height: 1.4; }
+
+    .sidebar nav { padding: 12px 0; }
+    .nav-section {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--grey-3); padding: 16px 20px 6px;
+    }
+    .sidebar a {
+      display: block;
+      padding: 7px 20px;
+      font-size: 12.5px;
+      color: #bdc1c6;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    .sidebar a:hover, .sidebar a.active {
+      color: #fff;
+      background: rgba(255,255,255,.07);
+      border-left-color: var(--k8s-blue);
+    }
+
+    .main { flex: 1; overflow-x: hidden; min-width: 0; }
+
+    .hero {
+      background: linear-gradient(135deg, #1e3a5f 0%, var(--k8s-blue) 50%, #5b7cfa 100%);
+      color: #fff;
+      padding: 52px 64px 44px;
+    }
+    .hero-meta { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: .8; margin-bottom: 12px; }
+    .hero h1 { font-size: 32px; font-weight: 700; line-height: 1.2; }
+    .hero p  { font-size: 16px; opacity: .9; margin-top: 14px; max-width: 720px; }
+    .hero-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .pill {
+      font-size: 11px; font-weight: 600; letter-spacing: .35px;
+      padding: 5px 12px; border-radius: 100px;
+      background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.28);
+    }
+    .hero-links { margin-top: 18px; font-size: 13px; opacity: .92; }
+    .hero-links a { color: #fff; font-weight: 600; }
+
+    .content { padding: 44px 64px 56px; max-width: 920px; }
+    .content + .content { padding-top: 0; }
+
+    .section-header {
+      display: flex; align-items: center; gap: 14px;
+      padding: 28px 0 18px;
+      border-bottom: 2px solid var(--grey-2);
+      margin-bottom: 24px;
+    }
+    .section-icon {
+      width: 42px; height: 42px; border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .icon-blue   { background: #e8f0fe; }
+    .icon-green  { background: #e6f4ea; }
+    .icon-orange { background: #fef3e2; }
+    .icon-purple { background: #ede7f6; }
+    .icon-teal   { background: #e0f2f1; }
+
+    .section-header h2 { font-size: 22px; font-weight: 700; color: var(--grey-5); }
+    .section-header p  { font-size: 13px; color: var(--grey-4); margin-top: 2px; }
+
+    .content h3 { font-size: 17px; font-weight: 700; margin: 26px 0 10px; color: var(--grey-5); }
+    .content h4 { font-size: 13px; font-weight: 700; margin: 18px 0 8px; color: var(--grey-4); text-transform: uppercase; letter-spacing: .5px; }
+    .content p  { margin-bottom: 14px; color: var(--grey-4); }
+    .content ul, .content ol { margin: 12px 0 18px 1.35rem; color: var(--grey-4); }
+    .content li { margin-bottom: 8px; }
+    .content a { color: var(--blue); font-weight: 500; }
+    .content a:hover { text-decoration: underline; }
+
+    pre, code { font-family: var(--mono); font-size: 13px; }
+    pre {
+      background: #1a1d21;
+      color: #e8eaed;
+      padding: 18px 20px;
+      border-radius: var(--radius);
+      overflow-x: auto;
+      margin: 14px 0 22px;
+      line-height: 1.55;
+      border: 1px solid #2d3238;
+    }
+    code {
+      background: var(--grey-2);
+      color: #c5221f;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12.5px;
+    }
+    pre code { background: none; color: #e8eaed; padding: 0; font-size: 12.5px; }
+
+    .table-wrap { overflow-x: auto; margin: 16px 0 24px; border-radius: var(--radius); box-shadow: var(--shadow); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th {
+      background: var(--grey-5); color: #fff;
+      padding: 11px 16px; text-align: left;
+      font-size: 11px; font-weight: 600; letter-spacing: .45px; text-transform: uppercase;
+    }
+    td { padding: 10px 16px; border-bottom: 1px solid var(--grey-2); color: var(--grey-4); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) td { background: var(--grey-1); }
+
+    .callout {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 16px 20px; border-radius: var(--radius);
+      margin: 16px 0 24px;
+    }
+    .callout-icon { font-size: 20px; flex-shrink: 0; }
+    .callout-body h4 { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+    .callout-body p  { margin: 0; font-size: 13px; color: var(--grey-4); line-height: 1.55; }
+    .callout.tip    { background: #e6f4ea; border-left: 4px solid var(--green); }
+    .callout.tip .callout-body h4 { color: #137333; }
+    .callout.info   { background: #e8f0fe; border-left: 4px solid var(--blue); }
+    .callout.info .callout-body h4 { color: var(--blue-dk); }
+    .callout.warn   { background: #fef7e0; border-left: 4px solid var(--orange); }
+    .callout.warn .callout-body h4 { color: #b06000; }
+
+    .arch {
+      background: linear-gradient(160deg, #1e2936 0%, #252b38 100%);
+      border-radius: var(--radius);
+      padding: 26px 28px; margin: 16px 0 24px;
+      font-family: var(--mono); font-size: 12.5px; color: #c9d1d9;
+      line-height: 1.85; overflow-x: auto;
+      border: 1px solid var(--grey-2);
+    }
+
+    hr { border: none; border-top: 2px solid var(--grey-2); margin: 36px 0; }
+
+    .footer {
+      background: var(--grey-5); color: var(--grey-3);
+      padding: 26px 64px; font-size: 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .footer a { color: #9ab8ff; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    .subcard {
+      background: var(--grey-1);
+      border: 1px solid var(--grey-2);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin: 16px 0 22px;
+    }
+    .subcard h4 { margin-top: 0; }
+
+    @media (max-width: 960px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; position: static; max-height: 280px; }
+      .hero, .content { padding: 28px 22px; }
+      .footer { padding: 22px; flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <h1>☸️ GKE Lab Manual</h1>
+      <p>Study Jam Week 3 — Kubernetes Engine on your existing GCP project</p>
+    </div>
+    <nav>
+      <div class="nav-section">Start</div>
+      <a href="#overview">Overview</a>
+      <a href="#compare">Cloud Run vs GKE</a>
+      <a href="#console">Console-first lab?</a>
+      <a href="#prereq">Prerequisites</a>
+
+      <div class="nav-section">Lab steps</div>
+      <a href="#step-1">Step 1 — Enable APIs</a>
+      <a href="#step-2">Step 2 — Networking &amp; SQL</a>
+      <a href="#step-3">Step 3 — GKE cluster</a>
+      <a href="#step-4">Step 4 — Container images</a>
+      <a href="#step-5">Step 5 — Secrets</a>
+      <a href="#step-6">Step 6 — ConfigMap</a>
+      <a href="#step-7">Step 7 — Deploy apps</a>
+      <a href="#step-8">Step 8 — Ingress</a>
+      <a href="#step-9">Step 9 — Migrations</a>
+      <a href="#step-10">Step 10 — Verify</a>
+      <a href="#step-11">Step 11 — Tear down</a>
+
+      <div class="nav-section">Reference</div>
+      <a href="#architecture">Architecture</a>
+      <a href="#cost">Cost notes</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+      <a href="#extensions">Optional extensions</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+
+    <header class="hero">
+      <div class="hero-meta">DVT Study Jam — Week 3 · GKE · March 2026</div>
+      <h1>GKE Lab Setup<br>Google Kubernetes Engine</h1>
+      <p>Deploy the same <strong>React + NestJS + PostgreSQL</strong> stack to <strong>GKE</strong>, reusing <strong>Cloud SQL</strong>, <strong>Artifact Registry</strong>, and <strong>Secret Manager</strong> from the Cloud Run lab where possible.</p>
+      <div class="hero-pills">
+        <span class="pill">GKE Autopilot / Standard</span>
+        <span class="pill">Ingress &amp; ClusterIP</span>
+        <span class="pill">Private IP → Cloud SQL</span>
+        <span class="pill">Drizzle migrations (Job)</span>
+      </div>
+      <p class="hero-links">
+        Plain Markdown: <a href="./GKE-SETUP.md">GKE-SETUP.md</a>
+        ·
+        <a href="https://console.cloud.google.com/kubernetes/list?project=dvt-lab-devfest-2025" target="_blank" rel="noopener">Open GKE Console</a>
+      </p>
+    </header>
+
+    <div class="content" id="overview">
+      <div class="section-header">
+        <div class="section-icon icon-blue">📋</div>
+        <div>
+          <h2>Overview</h2>
+          <p>Project metadata and source links</p>
+        </div>
+      </div>
+      <ul>
+        <li><strong>GitHub:</strong> <a href="https://github.com/kevin-naicker-dvt/study-jam-week3-monorepo" target="_blank" rel="noopener">kevin-naicker-dvt/study-jam-week3-monorepo</a></li>
+        <li><strong>GCP project:</strong> <code>dvt-lab-devfest-2025</code></li>
+        <li><strong>Region:</strong> <code>africa-south1</code></li>
+        <li><strong>Companion guide (Cloud Run):</strong> <a href="./GCP-SETUP.md">GCP-SETUP.md</a></li>
+      </ul>
+    </div>
+
+    <div class="content" id="compare">
+      <div class="section-header">
+        <div class="section-icon icon-orange">⚖️</div>
+        <div>
+          <h2>How this differs from Cloud Run</h2>
+          <p>Same app, different hosting model</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Topic</th>
+              <th>Cloud Run (GCP-SETUP)</th>
+              <th>GKE (this lab)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Workloads</td>
+              <td>Managed revisions</td>
+              <td>Pods, Deployments, Services</td>
+            </tr>
+            <tr>
+              <td>Networking</td>
+              <td>VPC connector to Cloud SQL</td>
+              <td>Cluster nodes in VPC reach Cloud SQL <strong>private IP</strong></td>
+            </tr>
+            <tr>
+              <td>Public HTTP</td>
+              <td>Cloud Run URLs</td>
+              <td><strong>Ingress</strong> (or <code>LoadBalancer</code> services)</td>
+            </tr>
+            <tr>
+              <td>Frontend <code>VITE_API_URL</code></td>
+              <td>Injected in Cloud Build from Run URL</td>
+              <td>You choose a <strong>stable URL</strong> (Ingress hostname) <strong>before</strong> building the frontend image</td>
+            </tr>
+            <tr>
+              <td>Scaling</td>
+              <td>Automatic</td>
+              <td>HPA / cluster autoscaler (configurable)</td>
+            </tr>
+            <tr>
+              <td><code>DB_PASSWORD</code> / <code>JWT_SECRET</code></td>
+              <td><code>gcloud run deploy --set-secrets</code> maps Secret Manager → env vars</td>
+              <td>You create a <strong>Kubernetes Secret</strong> in the cluster (e.g. <code>studyjam-runtime</code>); GKE does not read Secret Manager automatically unless you add CSI / External Secrets</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The backend serves <code>/health</code> (no <code>/api</code> prefix) and <code>/api/*</code> for the API (<code>backend/src/main.ts</code>). The production frontend listens on <strong>8080</strong> (nginx); the backend on <strong>3000</strong>.</p>
+    </div>
+
+    <div class="content" id="console">
+      <div class="section-header">
+        <div class="section-icon icon-teal">🖥️</div>
+        <div>
+          <h2>Can you do this lab from the Google Cloud Console?</h2>
+          <p>Yes, for almost everything — plus Cloud Shell when needed</p>
+        </div>
+      </div>
+      <p><strong>Yes, for almost everything.</strong> You do not need <code>gcloud</code> or <code>kubectl</code> on your laptop if you use the Console plus <strong>Cloud Shell</strong> (Activate Cloud Shell in the header).</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>What</th>
+              <th>Console / Cloud Shell?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Enable APIs, VPC firewall rules</td>
+              <td><strong>Console</strong> (APIs &amp; Services, VPC Network)</td>
+            </tr>
+            <tr>
+              <td>Create / delete GKE cluster</td>
+              <td><strong>Console</strong> (Kubernetes Engine)</td>
+            </tr>
+            <tr>
+              <td>Connect <code>kubectl</code> to the cluster</td>
+              <td><strong>Console</strong> → cluster <strong>Connect</strong> → <strong>Run in Cloud Shell</strong></td>
+            </tr>
+            <tr>
+              <td>Build container images</td>
+              <td>No Docker build button in Console — reuse <strong>Artifact Registry</strong> images or <strong>Cloud Build</strong></td>
+            </tr>
+            <tr>
+              <td>Namespace, Secrets, ConfigMaps</td>
+              <td><strong>Console</strong> (GKE → Configuration); sometimes one <code>kubectl</code> line in Cloud Shell</td>
+            </tr>
+            <tr>
+              <td>Deployments, Ingress, Jobs</td>
+              <td>Deploy wizard for simple cases; <strong>Apply YAML</strong> / <code>kubectl apply</code> in Cloud Shell for this repo</td>
+            </tr>
+            <tr>
+              <td>Logs, Ingress IP, verify</td>
+              <td><strong>Console</strong> + browser; optional <code>curl</code> in Cloud Shell</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>“Limited gcloud”</strong> usually means: open Cloud Shell, run Connect once, then short <code>kubectl</code> commands or paste YAML.</p>
+    </div>
+
+    <div class="content" id="prereq">
+      <div class="section-header">
+        <div class="section-icon icon-green">✓</div>
+        <div>
+          <h2>Prerequisites</h2>
+          <p>Before you create the cluster</p>
+        </div>
+      </div>
+      <ul>
+        <li>Completed (or equivalent) <strong>Cloud SQL</strong>, <strong>Artifact Registry</strong>, and <strong>Secret Manager</strong> from <a href="./GCP-SETUP.md">GCP-SETUP.md</a>: instance <code>studyjam-db</code> (private IP), database <code>studyjam</code>, user <code>studyjam_user</code>, repo <code>studyjam-repo</code>, secrets <code>studyjam-db-password</code> and <code>studyjam-jwt-secret</code>.</li>
+        <li><strong>Owner</strong> or <strong>Editor</strong> (or equivalent) to create GKE clusters and firewall rules.</li>
+        <li>Either local <code>gcloud</code> + <code>kubectl</code>, or <strong>Cloud Shell</strong> (recommended for Console-first):</li>
+      </ul>
+      <pre><code>gcloud config set project dvt-lab-devfest-2025</code></pre>
+    </div>
+
+    <hr />
+
+    <div class="content" id="step-1">
+      <div class="section-header">
+        <div class="section-icon icon-blue">1</div>
+        <div>
+          <h2>Step 1 — Enable APIs</h2>
+          <p>APIs &amp; Services → Library</p>
+        </div>
+      </div>
+      <p>In <strong>APIs &amp; Services → Library</strong>, enable any that are not already on:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>API</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Kubernetes Engine API</strong></td><td>GKE clusters</td></tr>
+            <tr><td><strong>Compute Engine API</strong></td><td>Nodes, load balancers, firewall (often auto-enabled)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="step-2">
+      <div class="section-header">
+        <div class="section-icon icon-blue">2</div>
+        <div>
+          <h2>Step 2 — Networking and Cloud SQL</h2>
+          <p>Private IP reachability from the cluster</p>
+        </div>
+      </div>
+      <ol>
+        <li>Note the <strong>private IP</strong> of <code>studyjam-db</code> (Cloud SQL → instance → Overview / Connect).</li>
+        <li>Create the cluster in <code>africa-south1</code> on the <strong>default VPC</strong> so traffic can reach SQL.</li>
+        <li>If connections time out, add a <strong>VPC firewall rule</strong> (<strong>VPC network → Firewall</strong>) for <strong>TCP 5432</strong> from GKE subnets to Cloud SQL (tighten for production).</li>
+      </ol>
+      <h4>Verify (Cloud Shell is enough)</h4>
+      <pre><code># Replace CLOUD_SQL_PRIVATE_IP with your instance private IP
+kubectl run psql-test --rm -it --restart=Never --image=postgres:15-alpine -- \
+  psql "postgresql://studyjam_user@CLOUD_SQL_PRIVATE_IP:5432/studyjam"</code></pre>
+      <p>Use the password from Secret Manager when prompted. Exit with <code>\q</code>.</p>
+    </div>
+
+    <div class="content" id="step-3">
+      <div class="section-header">
+        <div class="section-icon icon-blue">3</div>
+        <div>
+          <h2>Step 3 — Create a GKE cluster</h2>
+          <p>Console workflow + optional gcloud</p>
+        </div>
+      </div>
+
+      <div class="subcard">
+        <h4>Create the cluster (Google Cloud Console)</h4>
+        <ol>
+          <li><strong>Kubernetes Engine → Clusters → Create</strong></li>
+          <li>Choose <strong>Autopilot</strong> (or Standard if required)</li>
+          <li>Name <code>studyjam-gke</code>, region <code>africa-south1</code></li>
+          <li>Keep <strong>default VPC</strong></li>
+          <li>Create and wait until <strong>Running</strong></li>
+        </ol>
+      </div>
+
+      <div class="subcard">
+        <h4>Connect Cloud Shell (minimal CLI)</h4>
+        <ol>
+          <li>Clusters list → <strong>Connect</strong> on <code>studyjam-gke</code></li>
+          <li><strong>Run in Cloud Shell</strong> (runs <code>gcloud ... get-credentials</code>)</li>
+          <li><code>kubectl get nodes</code> should list nodes</li>
+        </ol>
+      </div>
+
+      <h4>Optional: gcloud</h4>
+      <p><strong>Autopilot</strong></p>
+      <pre><code>gcloud container clusters create-auto studyjam-gke \
+  --region=africa-south1 \
+  --project=dvt-lab-devfest-2025 \
+  --release-channel=regular</code></pre>
+      <p><strong>Standard</strong></p>
+      <pre><code>gcloud container clusters create studyjam-gke \
+  --region=africa-south1 \
+  --project=dvt-lab-devfest-2025 \
+  --num-nodes=2 \
+  --machine-type=e2-medium \
+  --enable-ip-alias \
+  --release-channel=regular</code></pre>
+      <pre><code>gcloud container clusters get-credentials studyjam-gke \
+  --region=africa-south1 \
+  --project=dvt-lab-devfest-2025</code></pre>
+    </div>
+
+    <div class="content" id="step-4">
+      <div class="section-header">
+        <div class="section-icon icon-blue">4</div>
+        <div>
+          <h2>Step 4 — Build and push images</h2>
+          <p>Artifact Registry paths</p>
+        </div>
+      </div>
+      <h4>Console workflow (no local Docker)</h4>
+      <ul>
+        <li><strong>Reuse images</strong> from Cloud Build / Cloud Run: <strong>Artifact Registry → studyjam-repo</strong> — use existing tags (e.g. <code>:latest</code>) in Deployments instead of <code>:gke-latest</code>.</li>
+        <li><strong>New <code>VITE_API_URL</code>:</strong> rebuild the frontend via <strong>Cloud Build</strong> with the correct <code>--build-arg</code>.</li>
+      </ul>
+      <h4>Local Docker (optional)</h4>
+      <pre><code>gcloud auth configure-docker africa-south1-docker.pkg.dev</code></pre>
+      <p><strong>Backend</strong></p>
+      <pre><code>docker build -t africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-backend:gke-latest ./backend
+docker push africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-backend:gke-latest</code></pre>
+      <p>Frontend bakes <code>VITE_API_URL</code> at build time; backend uses <code>FRONTEND_URL</code> for CORS. Example:</p>
+      <ul>
+        <li><code>FRONTEND_URL=https://studyjam.example.com</code></li>
+        <li><code>VITE_API_URL=https://studyjam.example.com/api</code></li>
+      </ul>
+      <pre><code>docker build \
+  --build-arg VITE_API_URL=https://studyjam.example.com/api \
+  -t africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-frontend:gke-latest \
+  ./frontend
+
+docker push africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-frontend:gke-latest</code></pre>
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body">
+          <h4>Lab tip</h4>
+          <p>You can use a placeholder hostname, create the Ingress, then update DNS and rebuild the frontend. For quick tests, some classes use <strong>nip.io</strong> with the Ingress IP.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="step-5">
+      <div class="section-header">
+        <div class="section-icon icon-blue">5</div>
+        <div>
+          <h2>Step 5 — Kubernetes secrets</h2>
+          <p>DB password and JWT</p>
+        </div>
+      </div>
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body">
+          <h4>Why Cloud Run works but GKE needs this step</h4>
+          <p>The <strong>same image</strong> expects <code>DB_PASSWORD</code> and <code>JWT_SECRET</code> in the environment. On <strong>Cloud Run</strong>, <code>cloudbuild.yaml</code> uses <code>--set-secrets</code> so GCP Secret Manager values are injected at deploy time. <strong>GKE does not do that</strong> — you must create a <strong>Kubernetes Secret</strong> (<code>studyjam-runtime</code> with those exact keys) in namespace <code>studyjam</code>, as below. Otherwise the backend may crash with <strong>JwtStrategy requires a secret or key</strong>. After updating the Secret, run <code>kubectl rollout restart deployment/studyjam-backend -n studyjam</code>.</p>
+        </div>
+      </div>
+      <div class="subcard">
+        <h4>Google Cloud Console</h4>
+        <p>GKE → cluster <code>studyjam-gke</code> → <strong>Configuration → Secrets → Create</strong>. Namespace <code>studyjam</code>. Opaque secret <code>studyjam-runtime</code> with keys <code>DB_PASSWORD</code> and <code>JWT_SECRET</code>.</p>
+      </div>
+      <h4>kubectl (Cloud Shell or local)</h4>
+      <pre><code>kubectl create namespace studyjam
+
+kubectl create secret generic studyjam-runtime \
+  --namespace=studyjam \
+  --from-literal=DB_PASSWORD='YOUR_DB_PASSWORD' \
+  --from-literal=JWT_SECRET='YOUR_JWT_SECRET'</code></pre>
+      <p>From Secret Manager:</p>
+      <pre><code>DB_PW=$(gcloud secrets versions access latest --secret=studyjam-db-password --project=dvt-lab-devfest-2025)
+JWT=$(gcloud secrets versions access latest --secret=studyjam-jwt-secret --project=dvt-lab-devfest-2025)
+
+kubectl create secret generic studyjam-runtime \
+  --namespace=studyjam \
+  --from-literal=DB_PASSWORD="$DB_PW" \
+  --from-literal=JWT_SECRET="$JWT"</code></pre>
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">
+          <h4>Production note</h4>
+          <p>For production, prefer <strong>Workload Identity</strong> + Secret Manager CSI or External Secrets.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="step-6">
+      <div class="section-header">
+        <div class="section-icon icon-blue">6</div>
+        <div>
+          <h2>Step 6 — ConfigMap</h2>
+          <p>Non-sensitive backend environment</p>
+        </div>
+      </div>
+      <p>Console: <strong>ConfigMaps → Create</strong>, name <code>studyjam-backend-config</code>, namespace <code>studyjam</code>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Key</th><th>Example value</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>NODE_ENV</code></td><td><code>production</code></td></tr>
+            <tr><td><code>PORT</code></td><td><code>3000</code></td></tr>
+            <tr><td><code>DB_HOST</code></td><td><em>Cloud SQL private IP</em></td></tr>
+            <tr><td><code>DB_PORT</code></td><td><code>5432</code></td></tr>
+            <tr><td><code>DB_NAME</code></td><td><code>studyjam</code></td></tr>
+            <tr><td><code>DB_USER</code></td><td><code>studyjam_user</code></td></tr>
+            <tr><td><code>FRONTEND_URL</code></td><td><code>https://studyjam.example.com</code> (must match browser origin)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <pre><code>kubectl create configmap studyjam-backend-config \
+  --namespace=studyjam \
+  --from-literal=NODE_ENV=production \
+  --from-literal=PORT=3000 \
+  --from-literal=DB_HOST=CLOUD_SQL_PRIVATE_IP \
+  --from-literal=DB_PORT=5432 \
+  --from-literal=DB_NAME=studyjam \
+  --from-literal=DB_USER=studyjam_user \
+  --from-literal=FRONTEND_URL=https://studyjam.example.com</code></pre>
+    </div>
+
+    <div class="content" id="step-7">
+      <div class="section-header">
+        <div class="section-icon icon-blue">7</div>
+        <div>
+          <h2>Step 7 — Deploy backend and frontend</h2>
+          <p>Wizard or YAML</p>
+        </div>
+      </div>
+      <p><strong>Console:</strong> Workloads → Deploy → existing image from Artifact Registry, namespace <code>studyjam</code>, ports <strong>3000</strong> (backend) / <strong>8080</strong> (frontend), env from ConfigMap + Secret. Expose as <strong>ClusterIP</strong>.</p>
+      <p>If the wizard cannot map all references, use <strong>Apply YAML</strong> in Cloud Shell. Update image tags to match Artifact Registry.</p>
+
+      <h4>backend-deployment.yaml</h4>
+      <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: studyjam-backend
+  namespace: studyjam
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: studyjam-backend
+  template:
+    metadata:
+      labels:
+        app: studyjam-backend
+    spec:
+      containers:
+        - name: backend
+          image: africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-backend:gke-latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: studyjam-backend-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: studyjam-runtime
+                  key: DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: studyjam-runtime
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: studyjam-backend
+  namespace: studyjam
+spec:
+  type: ClusterIP
+  selector:
+    app: studyjam-backend
+  ports:
+    - port: 3000
+      targetPort: 3000</code></pre>
+
+      <h4>frontend-deployment.yaml</h4>
+      <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: studyjam-frontend
+  namespace: studyjam
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: studyjam-frontend
+  template:
+    metadata:
+      labels:
+        app: studyjam-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-frontend:gke-latest
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: studyjam-frontend
+  namespace: studyjam
+spec:
+  type: ClusterIP
+  selector:
+    app: studyjam-frontend
+  ports:
+    - port: 8080
+      targetPort: 8080</code></pre>
+      <pre><code>kubectl apply -f backend-deployment.yaml
+kubectl apply -f frontend-deployment.yaml
+kubectl get pods -n studyjam -w</code></pre>
+    </div>
+
+    <div class="content" id="step-8">
+      <div class="section-header">
+        <div class="section-icon icon-blue">8</div>
+        <div>
+          <h2>Step 8 — Ingress (single host)</h2>
+          <p>GCE Ingress → HTTP(S) load balancer</p>
+        </div>
+      </div>
+      <p>Paths: <code>/health</code> and <code>/api</code> → backend; <code>/</code> → frontend. Console: <strong>Services &amp; Ingress → Create Ingress</strong>, or <code>kubectl apply -f ingress.yaml</code>.</p>
+      <h4>ingress.yaml</h4>
+      <pre><code>apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: studyjam-ingress
+  namespace: studyjam
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+spec:
+  rules:
+    - host: studyjam.example.com
+      http:
+        paths:
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: studyjam-backend
+                port:
+                  number: 3000
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: studyjam-backend
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: studyjam-frontend
+                port:
+                  number: 8080</code></pre>
+      <pre><code>kubectl apply -f ingress.yaml
+kubectl get ingress -n studyjam</code></pre>
+      <ol>
+        <li>Wait for <strong>ADDRESS</strong> on the Ingress.</li>
+        <li>Point DNS (or <code>/etc/hosts</code>) at that IP.</li>
+        <li>For HTTPS, add ManagedCertificate or cert-manager per course requirements.</li>
+      </ol>
+    </div>
+
+    <div class="content" id="step-9">
+      <div class="section-header">
+        <div class="section-icon icon-blue">9</div>
+        <div>
+          <h2>Step 9 — Database migrations (Job)</h2>
+          <p>Same image as API, different command</p>
+        </div>
+      </div>
+      <p>Command: <code>node</code> + <code>dist/database/migrate.js</code> (same split as Cloud Run in GCP-SETUP).</p>
+      <h4>migrate-job.yaml</h4>
+      <pre><code>apiVersion: batch/v1
+kind: Job
+metadata:
+  name: studyjam-migrate
+  namespace: studyjam
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: africa-south1-docker.pkg.dev/dvt-lab-devfest-2025/studyjam-repo/studyjam-backend:gke-latest
+          command: ["node", "dist/database/migrate.js"]
+          envFrom:
+            - configMapRef:
+                name: studyjam-backend-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: studyjam-runtime
+                  key: DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: studyjam-runtime
+                  key: JWT_SECRET</code></pre>
+      <pre><code>kubectl apply -f migrate-job.yaml
+kubectl logs -n studyjam job/studyjam-migrate -f</code></pre>
+      <p>Expect <strong>Migrations complete.</strong> On failure: <code>kubectl delete job studyjam-migrate -n studyjam</code>, fix, re-apply.</p>
+    </div>
+
+    <div class="content" id="step-10">
+      <div class="section-header">
+        <div class="section-icon icon-green">✓</div>
+        <div>
+          <h2>Step 10 — Verify</h2>
+          <p>Health check and SQL</p>
+        </div>
+      </div>
+      <pre><code>curl -sS "https://studyjam.example.com/health"</code></pre>
+      <p>Open the app in the browser; test register / login. In Cloud SQL Studio:</p>
+      <pre><code>SELECT * FROM drizzle_migrations;</code></pre>
+    </div>
+
+    <div class="content" id="step-11">
+      <div class="section-header">
+        <div class="section-icon icon-orange">🗑️</div>
+        <div>
+          <h2>Step 11 — Tear down (optional)</h2>
+          <p>Cluster and namespace</p>
+        </div>
+      </div>
+      <p><strong>Console:</strong> Kubernetes Engine → Clusters → delete <code>studyjam-gke</code>. Optionally delete workloads / namespace from the UI.</p>
+      <pre><code>kubectl delete namespace studyjam
+
+gcloud container clusters delete studyjam-gke \
+  --region=africa-south1 \
+  --project=dvt-lab-devfest-2025</code></pre>
+      <p>This does <strong>not</strong> delete Cloud SQL, Artifact Registry, or Secret Manager.</p>
+    </div>
+
+    <div class="content" id="architecture">
+      <div class="section-header">
+        <div class="section-icon icon-purple">⬡</div>
+        <div>
+          <h2>Architecture (GKE)</h2>
+          <p>Request flow</p>
+        </div>
+      </div>
+      <div class="arch">Browser
+   │
+   ▼
+GKE Ingress (HTTP(S) LB)
+   │
+   ├─► /health, /api/*  ──► Service studyjam-backend:3000  ──► Pods (NestJS)
+   │                                                      │
+   │                                                      ▼
+   │                                              Cloud SQL (private IP)
+   │
+   └─► /                ──► Service studyjam-frontend:8080 ──► Pods (nginx + static)</div>
+    </div>
+
+    <div class="content" id="cost">
+      <div class="section-header">
+        <div class="section-icon icon-teal">$</div>
+        <div>
+          <h2>Cost notes (approximate)</h2>
+          <p>GKE vs Cloud Run</p>
+        </div>
+      </div>
+      <p>GKE <strong>Autopilot</strong> bills per pod resource requests; <strong>Standard</strong> bills for nodes plus cluster management. A small lab cluster plus Cloud SQL is usually more expensive than Cloud Run at low traffic. Delete the cluster when finished.</p>
+    </div>
+
+    <div class="content" id="troubleshooting">
+      <div class="section-header">
+        <div class="section-icon icon-orange">🔧</div>
+        <div>
+          <h2>Troubleshooting</h2>
+          <p>Common issues</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Issue</th><th>What to check</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Pods <code>CrashLoopBackOff</code></td><td><code>kubectl logs</code>; <code>DB_HOST</code>, secrets, image tag</td></tr>
+            <tr><td><code>JwtStrategy requires a secret or key</code> / JWT missing</td><td>Kubernetes Secret <code>studyjam-runtime</code> in <code>studyjam</code> with non-empty <code>JWT_SECRET</code> and <code>DB_PASSWORD</code> (Cloud Run uses <code>--set-secrets</code>; GKE needs <a href="#step-5">Step 5</a>). <code>kubectl get secret studyjam-runtime -n studyjam</code></td></tr>
+            <tr><td>DB connection timeouts</td><td>Firewall, VPC, Cloud SQL private IP, same region/VPC</td></tr>
+            <tr><td>Ingress 404 / wrong backend</td><td>Path order; <code>/api</code> and <code>/health</code></td></tr>
+            <tr><td>CORS errors</td><td><code>FRONTEND_URL</code> must match browser origin exactly</td></tr>
+            <tr><td>Frontend wrong API</td><td>Rebuild image with correct <code>VITE_API_URL</code></td></tr>
+            <tr><td>Migration job hangs</td><td>Same DB connectivity as Deployment</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="extensions">
+      <div class="section-header">
+        <div class="section-icon icon-blue">＋</div>
+        <div>
+          <h2>Optional extensions</h2>
+          <p>After the core lab</p>
+        </div>
+      </div>
+      <ul>
+        <li><strong>HPA</strong> on CPU for backend and frontend</li>
+        <li><strong>Cloud Build</strong> trigger → build/push + <code>kubectl apply</code> / Helm</li>
+        <li><strong>Workload Identity</strong> for Secret Manager without duplicating secrets</li>
+        <li><strong>Cloud SQL Auth Proxy</strong> sidecar instead of raw private IP</li>
+      </ul>
+      <p>Cloud Run path: <a href="./GCP-SETUP.md">GCP-SETUP.md</a> and <a href="./cloudbuild.yaml">cloudbuild.yaml</a>.</p>
+    </div>
+
+    <div class="footer">
+      <div>DVT Study Jam — Week 3 · GKE Lab · March 2026</div>
+      <div><a href="./GKE-SETUP.md">Source: GKE-SETUP.md</a> · <code>dvt-lab-devfest-2025</code> · <code>africa-south1</code></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const sections = document.querySelectorAll('.main [id]');
+  const links = document.querySelectorAll('.sidebar a');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector('.sidebar a[href="#' + e.target.id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-15% 0px -65% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
