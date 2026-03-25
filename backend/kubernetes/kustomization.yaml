@@ -1,0 +1,24 @@
+# Standard layout for GKE / kubectl / CI: one namespace, Kustomize injects metadata.namespace.
+# Apply: from repo root, with kubectl connected to your cluster:
+#   kubectl apply -k api/Kubernetes
+# Migration job (run once per schema change; not part of default apply):
+#   kubectl apply -f api/Kubernetes/job-migrate.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: studyjam-k8s
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: studyjam-week3
+      app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - deployment-backend.yaml
+  - service-backend.yaml
+  - deployment-frontend.yaml
+  - service-frontend.yaml
+  - ingress.yaml

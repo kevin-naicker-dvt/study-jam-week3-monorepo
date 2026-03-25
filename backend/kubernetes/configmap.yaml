@@ -1,0 +1,14 @@
+# Non-sensitive backend env. Set DB_HOST to Cloud SQL private IP and FRONTEND_URL to your real browser origin.
+# Secret studyjam-k8s-runtime (DB_PASSWORD, JWT_SECRET) is created separately — see GKE-SETUP.md.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: studyjam-k8s-backend-config
+data:
+  NODE_ENV: production
+  PORT: "3000"
+  DB_HOST: REPLACE_CLOUD_SQL_PRIVATE_IP
+  DB_PORT: "5432"
+  DB_NAME: studyjam
+  DB_USER: studyjam_user
+  FRONTEND_URL: https://studyjam.example.com

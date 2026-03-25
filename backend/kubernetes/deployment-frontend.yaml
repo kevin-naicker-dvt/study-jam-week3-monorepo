@@ -1,17 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: studyjam-frontend
-  namespace: studyjam
+  name: studyjam-k8s-fe
+  labels:
+    app.kubernetes.io/name: studyjam-frontend
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: studyjam-week3
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: studyjam-frontend
+      app: studyjam-k8s-fe
   template:
     metadata:
       labels:
-        app: studyjam-frontend
+        app: studyjam-k8s-fe
+        app.kubernetes.io/name: studyjam-frontend
+        app.kubernetes.io/component: web
+        app.kubernetes.io/part-of: studyjam-week3
     spec:
       containers:
         - name: frontend
@@ -24,16 +30,3 @@ spec:
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 5
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: studyjam-frontend
-  namespace: studyjam
-spec:
-  type: ClusterIP
-  selector:
-    app: studyjam-frontend
-  ports:
-    - port: 8080
-      targetPort: 8080

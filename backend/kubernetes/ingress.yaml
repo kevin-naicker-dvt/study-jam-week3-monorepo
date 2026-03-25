@@ -1,10 +1,11 @@
-# Paths: /health and /api → backend; / → frontend SPA (nginx).
-# Set spec.rules[0].host to your DNS name; point it at the Ingress IP when provisioned.
+# GCE Ingress: /health + /api → backend; / → frontend. Edit spec.rules[0].host for your DNS.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: studyjam-ingress
-  namespace: studyjam
+  name: studyjam-k8s-ingress
+  labels:
+    app.kubernetes.io/name: studyjam-ingress
+    app.kubernetes.io/part-of: studyjam-week3
   annotations:
     kubernetes.io/ingress.class: "gce"
 spec:
@@ -16,20 +17,20 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: studyjam-backend
+                name: studyjam-k8s-be
                 port:
                   number: 3000
           - path: /api
             pathType: Prefix
             backend:
               service:
-                name: studyjam-backend
+                name: studyjam-k8s-be
                 port:
                   number: 3000
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: studyjam-frontend
+                name: studyjam-k8s-fe
                 port:
                   number: 8080
